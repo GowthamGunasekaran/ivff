@@ -1,0 +1,194 @@
+.headerContainer {
+  background: #2c4cd3;
+  padding: 18px 24px 16px;
+}
+.title {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 18px;
+  color: white;
+  margin-bottom: 4px;
+}
+.subtitle {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.7);
+}
+.kpiRow {
+  display: flex;
+  gap: 24px;
+  margin-top: 14px;
+}
+.kpiLabel {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 2px;
+}
+.kpiValue {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+}
+.kpiValueWhite {
+  color: white;
+}
+.kpiValueGreen {
+  color: #6ee7b7;
+}
+.kpiValueAmber {
+  color: #fcd34d;
+}
+
+.manifestContainer {
+  flex: 1;
+  padding: 20px 24px;
+}
+.sectionTitle {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: #2c4cd3;
+  letter-spacing: 0.6px;
+  margin-bottom: 12px;
+}
+.tableHeader {
+  font-family: 'Segoe UI', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 11px !important;
+  color: #8a90a0 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  border: none !important;
+  padding: 6px 8px !important;
+}
+.tableCell {
+  font-family: 'Segoe UI', sans-serif !important;
+  font-size: 12px !important;
+  color: #1f2430 !important;
+  border: none !important;
+  padding: 6px 8px !important;
+  border-bottom: 1px solid #eceef3 !important;
+}
+.tableCellPadded {
+  padding: 8px 8px !important;
+}
+.cbuName {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+}
+.cbuNameAi {
+  color: #2c4cd3;
+}
+.cbuNameOrig {
+  color: #1f2430;
+}
+.tagBadge {
+  display: inline-block;
+  margin-top: 3px;
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 8px;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.tagBadgeAi {
+  background: #e4ebff;
+  color: #2c4cd3;
+}
+.tagBadgeOrig {
+  background: #eef7f0;
+  color: #2e9e5b;
+}
+.tableCellSecondary {
+  font-size: 10px !important;
+  color: #5a6072 !important;
+}
+.tableFooterRow {
+  border-top: 2px solid #d9dce1 !important;
+}
+.tableFooterCell {
+  font-family: 'Segoe UI', sans-serif !important;
+  font-size: 12px !important;
+  border: none !important;
+  padding: 6px 8px !important;
+  font-weight: 700 !important;
+  border-bottom: none !important;
+}
+.tableFooterVal {
+  color: #2c4cd3 !important;
+}
+.tableFooterValLg {
+  color: #2c4cd3 !important;
+  font-size: 14px !important;
+}
+
+.validationContainer {
+  width: 220px;
+  background: #f7f9fc;
+  border-left: 1px solid #eceef3;
+  padding: 20px 16px;
+}
+.validationTitle {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  color: #1f2430;
+  letter-spacing: 0.6px;
+  margin-bottom: 14px;
+}
+.validationRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.validationLabel {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 12px;
+  color: #1f2430;
+  font-weight: 600;
+}
+.validationDetail {
+  font-family: 'Segoe UI', sans-serif;
+  font-size: 11px;
+}
+.validationDetailOk {
+  color: #5a6072;
+}
+.validationDetailHigh {
+  color: #ef4b5c;
+}
+.validationDetailWarn {
+  color: #f59e0b;
+}
+
+.actionsContainer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 12px 24px;
+  border-top: 1px solid #eceef3;
+}
+.btnBack {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  color: #1f2430;
+  background: white;
+  border: 1px solid #d9dce1;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+}
+.btnConfirm {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 13px;
+  color: white;
+  background: #2c4cd3;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 20px;
+  cursor: pointer;
+}
