@@ -1,5 +1,6 @@
 import { useRef, useEffect } from "react";
 import ReactECharts from "echarts-for-react";
+import styles from "./EChartWrapper.module.css";
 
 export default function EChartWrapper({ title, option, height = 140 }) {
   const ref = useRef(null);
@@ -13,11 +14,8 @@ export default function EChartWrapper({ title, option, height = 140 }) {
   }, []);
 
   return (
-    <div className="flex flex-col gap-[4px] min-w-0" style={{ flex: 1 }}>
-      <span
-        style={{ fontFamily: "'Segoe UI', sans-serif", fontWeight: 700 }}
-        className="text-[#5a6072] text-[10px] tracking-[0.3px] uppercase px-[4px]"
-      >
+    <div className={styles.chartWrapper}>
+      <span className={styles.chartTitle}>
         {title}
       </span>
       <ReactECharts

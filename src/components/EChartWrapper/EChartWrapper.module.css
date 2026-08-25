@@ -1,0 +1,17 @@
+.chartWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  flex: 1;
+}
+
+.chartTitle {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: #5a6072;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  padding: 0 4px;
+}

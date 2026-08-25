@@ -1,5 +1,5 @@
 import { Fragment } from "react";
-import { useAppContext } from "../AppContext";
+import { useAppContext } from "../../AppContext";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -9,6 +9,7 @@ import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import styles from "./FactoryInventory.module.css";
 
 function FactoryRow({ row, expanded, onToggle }) {
   return (
@@ -31,18 +32,8 @@ function FactoryRow({ row, expanded, onToggle }) {
         </IconButton>
       </TableCell>
       <TableCell sx={{ p: "6px 4px", border: "none" }}>
-        <div
-          style={{ fontFamily: "'Segoe UI', sans-serif", fontWeight: 700 }}
-          className="text-[#1f2430] text-[11px]"
-        >
-          {row.name}
-        </div>
-        <div
-          style={{ fontFamily: "'Segoe UI', sans-serif" }}
-          className="text-[#5a6072] text-[8px]"
-        >
-          {row.code}
-        </div>
+        <div className={styles.rowName}>{row.name}</div>
+        <div className={styles.rowCode}>{row.code}</div>
       </TableCell>
       <TableCell
         align="right"
@@ -65,12 +56,8 @@ function DetailRow({ detail }) {
     <TableRow sx={{ backgroundColor: "#fafbff", borderBottom: "1px solid #eceef3" }}>
       <TableCell sx={{ p: "3px 6px", border: "none" }} />
       <TableCell sx={{ p: "3px 8px", border: "none", pl: "18px" }}>
-        <div style={{ fontFamily: "'Segoe UI', sans-serif", fontWeight: 700 }} className="text-[#1f2430] text-[10px]">
-          {detail.dc}
-        </div>
-        <div style={{ fontFamily: "'Segoe UI', sans-serif" }} className="text-[#5a6072] text-[8px]">
-          {detail.location}
-        </div>
+        <div className={styles.detailName}>{detail.dc}</div>
+        <div className={styles.detailLocation}>{detail.location}</div>
       </TableCell>
       <TableCell
         align="right"
@@ -92,29 +79,19 @@ export default function FactoryInventory() {
   const { factories, factoryDetails, factoryExpanded, toggleFactory } = useAppContext();
 
   return (
-    <div
-      className="flex flex-col shrink-0 rounded-[12px] border border-[#d9dce1]"
-      style={{ width: 290, maxHeight: 340, overflow: "hidden" }}
-    >
+    <div className={styles.container}>
       {/* Header */}
-      <div className="border-b border-[#d9dce1] flex flex-col items-start pb-[9px] pt-[10px] px-[14px]">
-        <div className="flex gap-[6px] items-center w-full">
-          <span
-            style={{ fontFamily: "'Segoe UI', sans-serif", fontWeight: 700 }}
-            className="text-[#1f2430] text-[11px] tracking-[0.5px] uppercase"
-          >
-            Factory Inventory
-          </span>
-          <span className="bg-[#e4ebff] text-[#2c4cd3] text-[8px] font-bold tracking-[0.4px] px-[7px] py-px rounded-[3px]">
-            ALL PLANTS
-          </span>
+      <div className={styles.header}>
+        <div className={styles.titleRow}>
+          <span className={styles.title}>Factory Inventory</span>
+          <span className={styles.badge}>ALL PLANTS</span>
         </div>
-        <div className="flex gap-[12px] items-center pt-[2px]">
-          <span style={{ fontFamily: "'Segoe UI', sans-serif" }} className="text-[#5a6072] text-[9px]">
-            Total Stock <strong className="text-[#1f2430]">103K</strong>
+        <div className={styles.statsRow}>
+          <span className={styles.statText}>
+            Total Stock <strong style={{ color: "#1f2430" }}>103K</strong>
           </span>
-          <span style={{ fontFamily: "'Segoe UI', sans-serif" }} className="text-[#5a6072] text-[9px]">
-            Eligible <strong className="text-[#2c4cd3]">17.3K</strong>
+          <span className={styles.statText}>
+            Eligible <strong style={{ color: "#2c4cd3" }}>17.3K</strong>
           </span>
         </div>
       </div>

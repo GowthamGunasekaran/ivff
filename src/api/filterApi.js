@@ -1,4 +1,4 @@
-import { filterDefs, initFilters } from "../utils/constants";
+import { filterDefs, initFilters, minDate, maxDate, currentStartDate, currentEndDate } from "../utils/constants";
 
 export const fetchFilters = async (payload = {}) => {
   try {
@@ -15,6 +15,6 @@ export const fetchFilters = async (payload = {}) => {
     return await response.json();
   } catch (error) {
     console.warn('Error fetching filter data, falling back to mock data:', error);
-    return { filterDefs, initFilters };
+    return { filterDefs, initFilters, minDate, maxDate, currentStartDate, currentEndDate };
   }
 };

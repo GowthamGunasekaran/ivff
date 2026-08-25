@@ -5,11 +5,11 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import SearchIcon from "@mui/icons-material/Search";
-import { useAppContext } from "../AppContext";
-import ReviewDialog from "./ReviewDialog";
-import SearchResultPanel from "./SearchResultPanel";
-import { PlantRow } from "./ShipmentTableRows";
-import { HEADERS, COL } from "../utils/constants";
+import { useAppContext } from "../../AppContext";
+import ReviewDialog from "../ReviewDialog/ReviewDialog";
+import SearchResultPanel from "../SearchResultPanel/SearchResultPanel";
+import { PlantRow } from "../ShipmentTableRows/ShipmentTableRows";
+import { HEADERS, COL } from "../../utils/constants";
 import styles from "./ShipmentPlanningWorkspace.module.css";
 
 export default function ShipmentPlanningWorkspace() {

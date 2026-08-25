@@ -5,23 +5,22 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import svgPaths from "../imports/svg-k79osjc0g6";
 
-import KPICard from "./components/KPICard";
-import EChartWrapper from "./components/EChartWrapper";
-import FactoryInventory from "./components/FactoryInventory";
-import ShipmentPlanningWorkspace from "./components/ShipmentPlanningWorkspace";
-import AppHeader from "./components/AppHeader";
-import LeftRail from "./components/LeftRail";
-import FilterBar from "./components/FilterBar";
+import KPICard from "./components/KPICard/KPICard";
+import EChartWrapper from "./components/EChartWrapper/EChartWrapper";
+import FactoryInventory from "./components/FactoryInventory/FactoryInventory";
+import ShipmentPlanningWorkspace from "./components/ShipmentPlanningWorkspace/ShipmentPlanningWorkspace";
+import AppHeader from "./components/AppHeader/AppHeader";
+import LeftRail from "./components/LeftRail/LeftRail";
+import FilterBar from "./components/FilterBar/FilterBar";
+import appStyles from "./App.module.css";
 
-const GRAD_BLUE = "url(\"data:image/svg+xml;utf8,%3Csvg viewBox='0 0 252 122' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='url(%23gb)'/%3E%3Cdefs%3E%3CradialGradient id='gb' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(0 -14.64 -30.24 0 252 122)'%3E%3Cstop stop-color='rgba(220,233,253,1)' offset='0'/%3E%3Cstop stop-color='rgba(234,241,254,1)' offset='0.35'/%3E%3Cstop stop-color='rgba(255,255,255,1)' offset='0.65'/%3E%3C/radialGradient%3E%3C/defs%3E%3C/svg%3E\")";
-const GRAD_AMBER = "url(\"data:image/svg+xml;utf8,%3Csvg viewBox='0 0 252 122' xmlns='http://www.w3.org/2000/svg'%3E%3Crect width='100%25' height='100%25' fill='url(%23ga)'/%3E%3Cdefs%3E%3CradialGradient id='ga' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(0 -14.64 -30.24 0 252 122)'%3E%3Cstop stop-color='rgba(251,241,214,1)' offset='0'/%3E%3Cstop stop-color='rgba(252,248,238,1)' offset='0.35'/%3E%3Cstop stop-color='rgba(255,255,255,1)' offset='0.65'/%3E%3C/radialGradient%3E%3C/defs%3E%3C/svg%3E\")";
+const GRAD_BLUE = "radial-gradient(ellipse at bottom right, rgba(220, 233, 253, 0.9) 0%, rgba(234, 241, 254, 0.45) 40%, #ffffff 75%)";
+const GRAD_AMBER = "radial-gradient(ellipse at bottom right, rgba(251, 241, 214, 0.9) 0%, rgba(252, 248, 238, 0.45) 40%, #ffffff 75%)";
 
 const theme = createTheme({
   typography: { fontFamily: "'Segoe UI', system-ui, sans-serif" },
   palette: { primary: { main: "#2c4cd3" } },
 });
-
-
 
 // ─── KPI icons ────────────────────────────────────────────────────────────────
 function UtilIcon() {
@@ -48,20 +47,18 @@ function QueueIcon() {
   );
 }
 
-// ─── Chart options ────────────────────────────────────────────────────────────
-
-
+// ─── Chart Legend ─────────────────────────────────────────────────────────────
 function ChartLegend() {
   return (
-    <div className="flex gap-[14px] items-center ml-auto pr-[4px]">
+    <div className={appStyles.chartLegend}>
       {[{ color: "#8a90a0", dash: true, label: "Origin" }, { color: "#f59e0b", label: "Proposed" }, { color: "#8b5cf6", label: "Final" }].map((it) => (
-        <div key={it.label} className="flex gap-[5px] items-center">
+        <div key={it.label} className={appStyles.legendItem}>
           <svg width="20" height="2">
             {it.dash
               ? <line x1="0" y1="1" x2="20" y2="1" stroke={it.color} strokeWidth="1.5" strokeDasharray="3 2" />
               : <line x1="0" y1="1" x2="20" y2="1" stroke={it.color} strokeWidth="1.5" />}
           </svg>
-          <span style={{ fontFamily: "'Segoe UI'" }} className="text-[9px] text-[#5a6072]">{it.label}</span>
+          <span className={appStyles.legendLabel}>{it.label}</span>
         </div>
       ))}
     </div>
@@ -82,7 +79,7 @@ export default function App() {
 
           <div style={{ display: "flex", flexDirection: "column", flex: 1, overflow: "hidden", minWidth: 0, minHeight: 0 }}>
             {/* Tab bar */}
-            <div className="bg-white border-b border-[#d9dce1] px-[16px] shrink-0">
+            <div className={appStyles.tabBar}>
               <Tabs
                 value={activeTab}
                 onChange={(_, v) => setActiveTab(v)}
@@ -103,13 +100,13 @@ export default function App() {
                 <FilterBar />
 
                 {/* ── Main dashboard row: [3-col KPI+Charts grid] + [Factory Inventory] ── */}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "stretch", padding: "14px 20px 8px" }}>
+                <div className={appStyles.dashboardRow}>
 
                   {/* Left: stacked 3-column grid — KPI row on top, charts row below */}
-                  <div style={{ flex: "1 1 600px", minWidth: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <div className={appStyles.leftColumn}>
 
-                    {/* KPI Cards row — 3 equal columns */}
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                    {/* KPI Cards row — responsive 3 equal columns */}
+                    <div className={appStyles.kpiGrid}>
                       <KPICard
                         title="Utilisation"
                         iconBg="#dce9fd"
@@ -133,28 +130,34 @@ export default function App() {
                       />
                     </div>
 
-                    {/* Charts row — 3 equal columns, same widths as KPI cards above */}
-                    <div style={{
-                      display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10,
-                      background: "white", borderRadius: 12,
-                      boxShadow: "0px 4px 14px 0px rgba(31,41,55,0.06)",
-                      padding: "10px 14px 8px"
-                    }}>
-                      {/* Legend spanning all 3 cols */}
-                      <div style={{ gridColumn: "1 / -1", display: "flex", alignItems: "center", marginBottom: 2 }}>
+                    {/* Charts panel — flex row with vertical dividers between charts */}
+                    <div className={appStyles.chartsContainer}>
+                      {/* Legend row */}
+                      <div style={{ display: "flex", alignItems: "center", marginBottom: 6, flexShrink: 0 }}>
                         <span style={{ fontFamily: "'Segoe UI'", fontWeight: 700, fontSize: 10, color: "#1f2430", textTransform: "uppercase", letterSpacing: "0.5px" }}>
                           7-Day Performance Trends
                         </span>
                         <ChartLegend />
                       </div>
-                      <EChartWrapper title="Utilisation Trend (%)" option={chartsData.utilisation} height={138} />
-                      <EChartWrapper title="Order Loss Saved Trend (₹L)" option={chartsData.orderLoss} height={138} />
-                      <EChartWrapper title="Acceptance % Trend" option={chartsData.acceptance} height={138} />
+                      {/* Three charts with vertical dividers */}
+                      <div className={appStyles.chartsRow}>
+                        <div className={appStyles.chartColumn}>
+                          <EChartWrapper title="Utilisation Trend (%)" option={chartsData.utilisation} height={138} />
+                        </div>
+                        <div className={appStyles.chartDivider} />
+                        <div className={appStyles.chartColumn}>
+                          <EChartWrapper title="Order Loss Saved Trend (₹L)" option={chartsData.orderLoss} height={138} />
+                        </div>
+                        <div className={appStyles.chartDivider} />
+                        <div className={appStyles.chartColumn}>
+                          <EChartWrapper title="Acceptance % Trend" option={chartsData.acceptance} height={138} />
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Right: Factory Inventory — spans both KPI row and charts row */}
-                  <div style={{ flex: "1 1 300px", minWidth: 300 }}>
+                  {/* Right: Factory Inventory */}
+                  <div className={appStyles.rightColumn}>
                     <FactoryInventory />
                   </div>
                 </div>

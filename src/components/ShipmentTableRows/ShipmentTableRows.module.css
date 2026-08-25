@@ -68,6 +68,9 @@
   color: #8a90a0;
   font-size: 10px;
 }
+.skuTextEmpty {
+  color: #8a90a0;
+}
 .skuInputRecQty {
   width: 46px;
   text-align: center;

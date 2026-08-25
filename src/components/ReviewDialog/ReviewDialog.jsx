@@ -10,7 +10,7 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
-import { manifest, validations } from "../utils/constants";
+import { manifest, validations } from "../../utils/constants";
 import styles from "./ReviewDialog.module.css";
 
 function ReviewHeader({ ind, dcLabel, onClose }) {

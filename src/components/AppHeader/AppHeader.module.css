@@ -1,0 +1,128 @@
+.header {
+  display: flex;
+  height: 54px;
+  align-items: stretch;
+  width: 100%;
+  flex-shrink: 0;
+}
+
+.logoCell {
+  background-color: #2c4cd3;
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 64px;
+}
+
+.contentArea {
+  background-color: #2c4cd3;
+  display: flex;
+  flex: 1;
+  align-items: center;
+  padding-left: 16px;
+  padding-right: 20px;
+  gap: 12px;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+}
+
+.appTitle {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: white;
+  font-size: 15px;
+  letter-spacing: 0.1px;
+  line-height: 19px;
+}
+
+.subtitleRow {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.subtitleText {
+  font-family: 'Segoe UI', sans-serif;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 11px;
+}
+
+.weekBadge {
+  background-color: #5ba6e0;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 9px;
+  border-radius: 9999px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.iconsRow {
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  padding-right: 4px;
+}
+
+.divider {
+  background-color: rgba(255, 255, 255, 0.3);
+  height: 32px;
+  width: 1px;
+  margin: 0 4px;
+}
+
+.userArea {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  cursor: pointer;
+}
+
+.avatar {
+  background-color: #c4956a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+}
+
+.avatarInitials {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: white;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.userName {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: white;
+  font-size: 13px;
+}
+
+.userRole {
+  font-family: 'Segoe UI', sans-serif;
+  font-style: italic;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+}

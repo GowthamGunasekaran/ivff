@@ -1,11 +1,15 @@
 export const initFilters = {
-  Date: "Today",
-  "Business Group": "All",
-  Category: "All",
-  "Source Plant Code": "All",
-  "DC Plant Code": "All",
-  CBU: "All",
+  "Source Plan": [],
+  DC: [],
+  CBU: [],
+  startDate: "2026-08-01",
+  endDate: "2026-08-25",
 };
+
+export const minDate = "2026-08-01";
+export const maxDate = "2026-08-31";
+export const currentStartDate = "2026-08-01";
+export const currentEndDate = "2026-08-25";
 
 export const kpiData = {
   utilisation: [
@@ -204,12 +208,9 @@ export const initShipments = [
 ];
 
 export const filterDefs = [
-  { label: "Date", options: ["Today", "Yesterday", "Last 7 Days"] },
-  { label: "Business Group", options: ["All", "HPC", "Foods", "Refreshments"] },
-  { label: "Category", options: ["All", "Personal Care", "Beverages"] },
-  { label: "Source Plant Code", options: ["All", "U918", "U920"] },
-  { label: "DC Plant Code", options: ["All", "DC001", "DC002"] },
-  { label: "CBU", options: ["All", "CBU-2201", "CBU-3101"] },
+  { label: "Source Plan", options: ["U918", "U920"] },
+  { label: "DC", options: ["DC001", "DC002"] },
+  { label: "CBU", options: ["CBU-2201", "CBU-3101"] },
 ];
 
 export const manifest = [

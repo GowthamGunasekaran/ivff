@@ -9,7 +9,7 @@ import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import CloseIcon from "@mui/icons-material/Close";
 import AddIcon from "@mui/icons-material/Add";
-import { pColors, COL } from "../utils/constants";
+import { pColors, COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
 function PBadge({ p }) {

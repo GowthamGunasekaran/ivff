@@ -1,0 +1,91 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  overflow: hidden;
+  padding: 12px 14px;
+  border-radius: 16px;
+  box-shadow: 0px 4px 14px 0px rgba(31, 41, 55, 0.07);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background-color: #ffffff;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.cardTitle {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: #767c88;
+  font-size: 11px;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.iconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.metricsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.metricDivider {
+  background-color: #d9dce1;
+  height: 34px;
+  width: 1px;
+  flex-shrink: 0;
+}
+
+.metricItem {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+
+.metricLabel {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: #8a90a0;
+  font-size: 9.5px;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  width: 100%;
+}
+
+.metricValue {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: -0.3px;
+  white-space: nowrap;
+  line-height: 22px;
+}

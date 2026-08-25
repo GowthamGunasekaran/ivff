@@ -16,6 +16,10 @@ export const AppProvider = ({ children }) => {
   const [activeTab, setActiveTab] = useState(0);
   const [filters, setFilters] = useState(null);
   const [filterDefs, setFilterDefs] = useState(null);
+  const [minDate, setMinDate] = useState(null);
+  const [maxDate, setMaxDate] = useState(null);
+  const [currentStartDate, setCurrentStartDate] = useState(null);
+  const [currentEndDate, setCurrentEndDate] = useState(null);
 
   // API Data States
   const [kpiData, setKpiData] = useState(null);
@@ -100,6 +104,10 @@ export const AppProvider = ({ children }) => {
 
         setFilters(filtersRes.initFilters);
         setFilterDefs(filtersRes.filterDefs);
+        setMinDate(filtersRes.minDate || null);
+        setMaxDate(filtersRes.maxDate || null);
+        setCurrentStartDate(filtersRes.currentStartDate || filtersRes.initFilters?.startDate || null);
+        setCurrentEndDate(filtersRes.currentEndDate || filtersRes.initFilters?.endDate || null);
         setKpiData(kpiRes);
         setChartsData(chartsRes);
         setFactories(factoryRes.initFactories);
@@ -130,6 +138,12 @@ export const AppProvider = ({ children }) => {
     factories,
     factoryDetails,
     filterDefs,
+    minDate,
+    maxDate,
+    currentStartDate,
+    setCurrentStartDate,
+    currentEndDate,
+    setCurrentEndDate,
     
     // States
     activeTab, setActiveTab,

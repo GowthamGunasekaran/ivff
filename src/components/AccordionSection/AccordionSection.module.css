@@ -1,0 +1,40 @@
+.wrapper {
+  width: 100%;
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  text-align: left;
+  padding: 8px 16px;
+  background: white;
+  border: none;
+  border-bottom: 1px solid #d9dce1;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.toggleBtn:hover {
+  background-color: #f7f9fc;
+}
+
+.title {
+  font-family: 'Segoe UI', sans-serif;
+  font-weight: 700;
+  color: #1f2430;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.badge {
+  background-color: #e4ebff;
+  color: #2c4cd3;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  padding: 1px 7px;
+  border-radius: 3px;
+}
