@@ -1,4 +1,3 @@
-import React from "react";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import Checkbox from "@mui/material/Checkbox";
@@ -57,7 +56,6 @@ export default function FilterBar() {
   const compactInputSx = {
     "& .MuiOutlinedInput-root": {
       fontSize: 11,
-      fontFamily: "'Segoe UI', sans-serif",
       borderRadius: "8px",
       minHeight: 32,
       padding: "2px 6px",
@@ -67,7 +65,6 @@ export default function FilterBar() {
       "& .MuiInputBase-input": {
         padding: "2px 4px",
         fontSize: 11,
-        fontFamily: "'Segoe UI', sans-serif",
         "&::placeholder": {
           color: "#5a6072",
           opacity: 0.85,
@@ -76,7 +73,6 @@ export default function FilterBar() {
     },
     "& .MuiInputLabel-root": {
       fontSize: 10,
-      fontFamily: "'Segoe UI', sans-serif",
       color: "#5a6072",
       transform: "translate(10px, 8px) scale(1)",
       "&.MuiInputLabel-shrink": {
@@ -116,7 +112,6 @@ export default function FilterBar() {
                   {...optionProps}
                   style={{
                     fontSize: 11,
-                    fontFamily: "'Segoe UI', sans-serif",
                     padding: "4px 8px",
                   }}
                 >
@@ -143,7 +138,6 @@ export default function FilterBar() {
                     sx={{
                       height: 20,
                       fontSize: 10,
-                      fontFamily: "'Segoe UI', sans-serif",
                       backgroundColor: "#e4ebff",
                       color: "#2c4cd3",
                       borderRadius: "4px",

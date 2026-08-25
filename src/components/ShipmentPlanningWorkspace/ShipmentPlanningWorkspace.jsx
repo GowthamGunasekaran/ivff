@@ -1,4 +1,3 @@
-import React, { useState } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -14,7 +13,11 @@ import styles from "./ShipmentPlanningWorkspace.module.css";
 
 export default function ShipmentPlanningWorkspace() {
   const {
-    shipmentsData: shipments,
+    plantsData: plants,
+    dcShipmentsCache,
+    dcLoadingState,
+    dcErrorState,
+    retryFetchDc,
     shipmentSearch, setShipmentSearch,
     searchTerm,
     openPlants, togglePlant,
@@ -41,7 +44,13 @@ export default function ShipmentPlanningWorkspace() {
       </div>
 
       <div className={styles.tableMainContainer}>
-        {searchTerm.length >= 3 && <SearchResultPanel term={searchTerm} data={shipments} />}
+        {searchTerm.length >= 3 && (
+          <SearchResultPanel
+            term={searchTerm}
+            data={plants}
+            dcShipmentsCache={dcShipmentsCache}
+          />
+        )}
 
         <div className={styles.tableScrollArea}>
           <Table stickyHeader size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
@@ -53,14 +62,23 @@ export default function ShipmentPlanningWorkspace() {
               </TableRow>
             </TableHead>
             <TableBody>
-              {shipments.map((p) => (
+              {plants.map((p) => (
                 <PlantRow
-                  key={p.id} plant={p}
-                  openPlant={!!openPlants[p.id]} onTogglePlant={() => togglePlant(p.id)}
-                  openDcs={openDcs} onToggleDc={toggleDc}
-                  openInds={openInds} onToggleInd={toggleInd}
-                  onRecChange={handleRecChange} searchTerm={searchTerm.length >= 3 ? searchTerm : ""}
+                  key={p.id}
+                  plant={p}
+                  openPlant={!!openPlants[p.id]}
+                  onTogglePlant={() => togglePlant(p.id)}
+                  openDcs={openDcs}
+                  onToggleDc={toggleDc}
+                  openInds={openInds}
+                  onToggleInd={toggleInd}
+                  onRecChange={handleRecChange}
+                  searchTerm={searchTerm.length >= 3 ? searchTerm : ""}
                   onReview={(ind, dcLabel) => { setReviewInd(ind); setReviewDc(dcLabel); }}
+                  dcShipmentsCache={dcShipmentsCache}
+                  dcLoadingState={dcLoadingState}
+                  dcErrorState={dcErrorState}
+                  onRetry={retryFetchDc}
                 />
               ))}
             </TableBody>

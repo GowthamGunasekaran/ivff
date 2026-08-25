@@ -25,7 +25,6 @@
 }
 
 .title {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: #1f2430;
   font-size: 11px;
@@ -51,34 +50,28 @@
 }
 
 .statText {
-  font-family: 'Segoe UI', sans-serif;
   color: #5a6072;
   font-size: 9px;
 }
 
-/* FactoryRow inline text styles (applied via style prop in JSX) */
 .rowName {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: #1f2430;
   font-size: 11px;
 }
 
 .rowCode {
-  font-family: 'Segoe UI', sans-serif;
   color: #5a6072;
   font-size: 8px;
 }
 
 .detailName {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: #1f2430;
   font-size: 10px;
 }
 
 .detailLocation {
-  font-family: 'Segoe UI', sans-serif;
   color: #5a6072;
   font-size: 8px;
 }

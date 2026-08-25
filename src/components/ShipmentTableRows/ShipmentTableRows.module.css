@@ -1,22 +1,22 @@
+/* Badges */
 .badgeP {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 9px;
   padding: 2px 7px;
   border-radius: 3px;
 }
+
 .badgeFill {
   background-color: #e4ebff;
-  color: #2c4cd3;
-  font-family: 'Segoe UI', sans-serif;
+  color: var(--color-primary, #2c4cd3);
   font-weight: 700;
   font-size: 8px;
   padding: 1px 5px;
   border-radius: 3px;
   margin-left: 4px;
 }
+
 .badgeStatus {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 10px;
   padding: 2px 8px;
@@ -25,103 +25,117 @@
 
 /* Sku Row */
 .skuRow {
-  background: white !important;
+  background: white;
 }
+
 .skuRow:hover td {
   background: #f7f9fc !important;
 }
+
 .skuRowHighlight:hover td {
   background: rgba(44, 76, 211, 0.09) !important;
 }
+
 .skuCell {
   padding: 5px 8px !important;
   border: none !important;
   border-bottom: 1px solid #eceef3 !important;
-  font-family: 'Segoe UI', sans-serif !important;
   font-size: 11px !important;
   vertical-align: middle !important;
-  background: white !important;
+  background: white;
 }
+
 .skuCellHighlight {
   background: rgba(44, 76, 211, 0.06) !important;
 }
+
 .skuId {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 11px;
   color: #1f2430;
 }
+
 .skuIdHighlight {
   color: #2c4cd3;
 }
+
 .skuDesc {
   color: #5a6072;
   font-size: 10px;
 }
+
 .skuOrdQty {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: #1f2430;
 }
+
 .skuOrdQtySub {
   font-weight: 400;
   color: #8a90a0;
   font-size: 10px;
 }
+
 .skuTextEmpty {
   color: #8a90a0;
 }
+
 .skuInputRecQty {
   width: 46px;
   text-align: center;
   border: 1.5px solid #d9dce1;
   border-radius: 4px;
   padding: 2px 4px;
-  font-family: 'Segoe UI', sans-serif;
   font-size: 12px;
   font-weight: 700;
   color: #2c4cd3;
   outline: none;
   background: white;
 }
+
 .skuInputRecQty:focus {
   border-color: #2c4cd3;
 }
+
 .skuRecQtySub {
-  font-family: 'Segoe UI', sans-serif;
   font-size: 10px;
   color: #8a90a0;
 }
+
 .skuElig {
   color: #1f2430;
   text-align: center;
 }
+
 .skuEligEmpty {
   color: #8a90a0;
   text-align: center;
 }
+
 .skuTotal {
   font-size: 10px;
   color: #5a6072;
 }
+
 .skuCloseIcon {
   font-size: 14px !important;
   color: #8a90a0 !important;
   cursor: pointer;
 }
+
 .skuCloseIcon:hover {
   color: #ef4b5c !important;
 }
+
 .skuCellAdd {
   padding: 6px 8px 8px 28px !important;
   border: none !important;
   background: white !important;
 }
+
 .skuBtnAdd {
   display: flex;
   align-items: center;
   gap: 4px;
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 600;
   font-size: 11px;
   color: #2c4cd3;
@@ -131,86 +145,98 @@
   padding: 4px 12px;
   cursor: pointer;
 }
+
 .skuIconAdd {
   font-size: 14px !important;
 }
 
-/* Ind Row */
+/* Ind (Shipment) Row */
 .indRow {
-  cursor: pointer !important;
-  background: #fff !important;
+  cursor: pointer;
+  background: #fff;
 }
+
 .indRow:hover td {
   background: #f4f7ff !important;
 }
+
 .indCell {
   padding: 7px 8px !important;
   border: none !important;
   border-bottom: 1px solid #eceef3 !important;
-  font-family: 'Segoe UI', sans-serif !important;
   vertical-align: middle !important;
 }
+
 .indCellExpand {
   padding: 7px 4px !important;
 }
+
 .indIconExpand {
   font-size: 14px !important;
   color: #5a6072 !important;
 }
+
 .indId {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: #1f2430;
 }
+
 .indSub {
   font-size: 9px;
   margin-top: 2px;
   color: #8a90a0;
 }
+
 .indUtil {
   color: #5a6072;
 }
+
 .indUtilTarget {
   font-weight: 700;
   color: #2e9e5b;
 }
+
 .indPriority {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 11px;
 }
+
 .indPriorityHigh {
   color: #ef4b5c;
 }
+
 .indPriorityMedium {
   color: #f59e0b;
 }
+
 .indPriorityLow {
   color: #5a6072;
 }
+
 .indOrdQty {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: #1f2430;
 }
+
 .indOrdQtySub {
   font-size: 10px;
   color: #8a90a0;
 }
+
 .indRecQty {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 11px;
   color: #2e9e5b;
 }
+
 .indRecQtySub {
   font-size: 10px;
   color: #8a90a0;
 }
+
 .indBtnReview {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: white;
@@ -223,11 +249,13 @@
 
 /* Dc Row */
 .dcRow {
-  cursor: pointer !important;
+  cursor: pointer;
 }
+
 .dcRow:hover td {
   background: #e8edf5 !important;
 }
+
 .dcCell {
   padding: 5px 8px !important;
   border: none !important;
@@ -236,32 +264,36 @@
   background: #f1f5f9 !important;
   vertical-align: middle !important;
 }
+
 .dcCellExpand {
   padding: 5px 4px !important;
 }
+
 .dcIconExpand {
   font-size: 13px !important;
   color: #5a6072 !important;
 }
+
 .dcName {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 11px;
   color: #1f2430;
 }
+
 .dcLocation {
-  font-family: 'Segoe UI', sans-serif;
   font-size: 9px;
   color: #5a6072;
 }
 
 /* Plant Row */
 .plantRow {
-  cursor: pointer !important;
+  cursor: pointer;
 }
+
 .plantRow:hover td {
   background: #1a3278 !important;
 }
+
 .plantCell {
   padding: 0 8px !important;
   border: none !important;
@@ -270,38 +302,40 @@
   vertical-align: middle !important;
   height: 28px !important;
 }
+
 .plantCellExpand {
   padding: 0 4px !important;
 }
+
 .plantIconExpand {
   font-size: 14px !important;
   color: rgba(255, 255, 255, 0.8) !important;
 }
+
 .plantName {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: white;
   letter-spacing: 0.24px;
 }
+
 .plantLocation {
-  font-family: 'Segoe UI', sans-serif;
   font-size: 9px;
   color: rgba(255, 255, 255, 0.4);
 }
+
 .plantBadgeNeutral {
   background: rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.65);
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 8px;
   padding: 1px 6px;
   border-radius: 3px;
 }
+
 .plantBadgeWarning {
   background: rgba(245, 158, 11, 0.16);
   color: #fcd34d;
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 8px;
   padding: 1px 6px;

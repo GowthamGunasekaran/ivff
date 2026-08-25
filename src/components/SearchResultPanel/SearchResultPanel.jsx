@@ -1,18 +1,31 @@
-import React from "react";
 import styles from "./SearchResultPanel.module.css";
 
-export default function SearchResultPanel({ term, data }) {
-  let inds = 0, dcs = new Set();
-  data.forEach((plant) =>
-    plant.children.forEach((dc) =>
-      dc.children.forEach((ind) => {
-        if (ind.skus.some((s) => s.id.toLowerCase() === term.toLowerCase() || s.desc.toLowerCase().includes(term.toLowerCase()))) {
+export default function SearchResultPanel({ term, data = [], dcShipmentsCache = {} }) {
+  let inds = 0;
+  const dcs = new Set();
+
+  data.forEach((plant) => {
+    (plant.children || []).forEach((dc) => {
+      const cacheKey = `${plant.id}_${dc.id}`;
+      const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
+      shipments.forEach((ind) => {
+        const skus = ind.children || ind.skus || [];
+        const match = skus.some((s) => {
+          const id = s.id || s.material || "";
+          const desc = s.desc || s.materialDescription || "";
+          return (
+            id.toLowerCase() === term.toLowerCase() ||
+            desc.toLowerCase().includes(term.toLowerCase())
+          );
+        });
+        if (match) {
           inds++;
           dcs.add(dc.id);
         }
-      })
-    )
-  );
+      });
+    });
+  });
+
   if (inds === 0) return null;
 
   return (

@@ -3,27 +3,29 @@
   border-bottom: 1px solid #d9dce1;
   padding: 10px 20px;
 }
+
 .header {
   display: flex;
   align-items: center;
   gap: 10px;
   margin-bottom: 10px;
 }
+
 .title {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: #1f2430;
 }
+
 .badge {
   background: #2c4cd3;
   color: white;
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 11px;
   padding: 2px 10px;
   border-radius: 20px;
 }
+
 .grid {
   background: white;
   border: 1px solid #d9dce1;
@@ -32,8 +34,8 @@
   grid-template-columns: 2fr 1.5fr 1.5fr 1.5fr 1fr;
   overflow: hidden;
 }
+
 .gridHeader {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 10px;
   color: #8a90a0;
@@ -43,22 +45,24 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
 }
+
 .gridCell {
   padding: 10px 14px;
   border-bottom: none;
 }
+
 .termHighlight {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: #2c4cd3;
 }
+
 .termDesc {
-  font-family: 'Segoe UI', sans-serif;
   font-size: 10px;
   color: #5a6072;
   margin-top: 2px;
 }
+
 .termBar {
   margin-top: 6px;
   background: #e4ebff;
@@ -66,18 +70,18 @@
   border-radius: 2px;
   width: 60%;
 }
+
 .gridCellCenter {
   padding: 10px 14px;
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 14px;
   color: #1f2430;
   display: flex;
   align-items: center;
 }
+
 .dcs {
   padding: 10px 14px;
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 12px;
   color: #2c4cd3;

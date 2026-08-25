@@ -1,17 +1,48 @@
-@import url('https://fonts.googleapis.com/css2?family=Nunito+Sans:ital,opsz,wdth,wght@0,6..12,75..125,200..1000;1,6..12,75..125,200..1000&display=swap');
-
-* {
-  font-family: 'Segoe UI', system-ui, sans-serif;
+:root {
+  --font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+  --color-primary: #2c4cd3;
+  --color-primary-hover: #1a3278;
+  --color-text-main: #1f2430;
+  --color-text-secondary: #5a6072;
+  --color-text-muted: #8a90a0;
+  --color-border: #d9dce1;
+  --color-bg-page: #f0f5f9;
+  --color-bg-card: #ffffff;
 }
 
-body {
+*, *::before, *::after {
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+html, body {
   margin: 0;
-  background: #f0f5f9;
+  padding: 0;
+  font-family: var(--font-family);
+  background: var(--color-bg-page);
+  color: var(--color-text-main);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+input, button, select, textarea {
+  font-family: inherit;
 }
 
 ::-webkit-scrollbar {
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
 }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #d9dce1; border-radius: 4px; }
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d0d4dc;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #b0b6c2;
+}

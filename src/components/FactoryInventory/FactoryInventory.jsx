@@ -37,13 +37,13 @@ function FactoryRow({ row, expanded, onToggle }) {
       </TableCell>
       <TableCell
         align="right"
-        sx={{ p: "6px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontSize: 11, color: "#5a6072" }}
+        sx={{ p: "6px 4px", border: "none", fontSize: 11, color: "#5a6072" }}
       >
         {row.stock}
       </TableCell>
       <TableCell
         align="right"
-        sx={{ p: "6px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontSize: 11, fontWeight: 700, color: "#2e9e5b" }}
+        sx={{ p: "6px 4px", border: "none", fontSize: 11, fontWeight: 700, color: "#2e9e5b" }}
       >
         {row.eligible}
       </TableCell>
@@ -61,13 +61,13 @@ function DetailRow({ detail }) {
       </TableCell>
       <TableCell
         align="right"
-        sx={{ p: "3px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontSize: 10, color: "#5a6072" }}
+        sx={{ p: "3px 4px", border: "none", fontSize: 10, color: "#5a6072" }}
       >
         {detail.stock}
       </TableCell>
       <TableCell
         align="right"
-        sx={{ p: "3px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontSize: 10, fontWeight: 700, color: "#2e9e5b" }}
+        sx={{ p: "3px 4px", border: "none", fontSize: 10, fontWeight: 700, color: "#2e9e5b" }}
       >
         {detail.eligible}
       </TableCell>
@@ -101,13 +101,13 @@ export default function FactoryInventory() {
         <TableHead>
           <TableRow sx={{ backgroundColor: "#f7f9fc", borderBottom: "1px solid #d9dce1" }}>
             <TableCell sx={{ p: "4px 6px", width: 24, border: "none" }} />
-            <TableCell sx={{ p: "4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, fontSize: 8, color: "#8a90a0", letterSpacing: "0.4px" }}>
+            <TableCell sx={{ p: "4px", border: "none", fontWeight: 700, fontSize: 8, color: "#8a90a0", letterSpacing: "0.4px" }}>
               FACTORY
             </TableCell>
-            <TableCell align="right" sx={{ p: "4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, fontSize: 8, color: "#8a90a0", letterSpacing: "0.4px", width: 46 }}>
+            <TableCell align="right" sx={{ p: "4px", border: "none", fontWeight: 700, fontSize: 8, color: "#8a90a0", letterSpacing: "0.4px", width: 46 }}>
               STOCK
             </TableCell>
-            <TableCell align="right" sx={{ p: "4px 8px 4px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, fontSize: 8, color: "#8a90a0", letterSpacing: "0.4px", width: 54 }}>
+            <TableCell align="right" sx={{ p: "4px 8px 4px 4px", border: "none", fontWeight: 700, fontSize: 8, color: "#8a90a0", letterSpacing: "0.4px", width: 54 }}>
               ELIGIBLE
             </TableCell>
           </TableRow>
@@ -149,13 +149,13 @@ export default function FactoryInventory() {
         <TableBody>
           <TableRow sx={{ backgroundColor: "#f7f9fc" }}>
             <TableCell sx={{ p: "6px", border: "none", width: 24 }} />
-            <TableCell sx={{ p: "6px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, fontSize: 11, color: "#1f2430" }}>
+            <TableCell sx={{ p: "6px 4px", border: "none", fontWeight: 700, fontSize: 11, color: "#1f2430" }}>
               TOTAL
             </TableCell>
-            <TableCell align="right" sx={{ p: "6px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, fontSize: 11, color: "#1f2430", width: 46 }}>
+            <TableCell align="right" sx={{ p: "6px 4px", border: "none", fontWeight: 700, fontSize: 11, color: "#1f2430", width: 46 }}>
               103K
             </TableCell>
-            <TableCell align="right" sx={{ p: "6px 8px 6px 4px", border: "none", fontFamily: "'Segoe UI', sans-serif", fontWeight: 700, fontSize: 11, color: "#2c4cd3", width: 54 }}>
+            <TableCell align="right" sx={{ p: "6px 8px 6px 4px", border: "none", fontWeight: 700, fontSize: 11, color: "#2c4cd3", width: 54 }}>
               17.3K
             </TableCell>
           </TableRow>

@@ -34,7 +34,6 @@
 }
 
 .appTitle {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: white;
   font-size: 15px;
@@ -49,7 +48,6 @@
 }
 
 .subtitleText {
-  font-family: 'Segoe UI', sans-serif;
   color: rgba(255, 255, 255, 0.7);
   font-size: 11px;
 }
@@ -100,7 +98,6 @@
 }
 
 .avatarInitials {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: white;
   font-size: 13px;
@@ -114,14 +111,12 @@
 }
 
 .userName {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: white;
   font-size: 13px;
 }
 
 .userRole {
-  font-family: 'Segoe UI', sans-serif;
   font-style: italic;
   color: rgba(255, 255, 255, 0.75);
   font-size: 11px;

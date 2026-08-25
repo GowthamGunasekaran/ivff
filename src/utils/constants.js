@@ -103,7 +103,7 @@ export const initFactoryDetails = {
   ],
 };
 
-export const initShipments = [
+export const initPlantHierarchy = [
   {
     id: "delhi",
     name: "Delhi Plant",
@@ -117,95 +117,104 @@ export const initShipments = [
         dc: "Delhi DC",
         location: "Delhi",
         shipments: 2,
-        children: [
-          {
-            id: "IND-24081",
-            label: "10T · 73.7% → 94.1%",
-            utilFrom: "73.7%",
-            utilTo: "94.1%",
-            weight: "10T",
-            priority: "High",
-            status: "ACCEPTED",
-            skus: [
-              { id: "VIM-500-24", desc: "Vim Liquid 500ml", p: "P1", ordQty: 320, ordCs: 13, ordT: 3.84, recCs: 2, csWeight: 0.72, elig: 6, total: "320 / 3.84T", fill: false },
-              { id: "LIF-125-72", desc: "Lifebuoy Total 125g", p: "P2", ordQty: 150, ordCs: 3, ordT: 1.35, recCs: 0, csWeight: 0.72, elig: 0, total: "150 / 1.35T", fill: false },
-              { id: "CLO-150-48", desc: "Closeup Red Hot 150g", p: "P2", ordQty: 200, ordCs: 5, ordT: 1.44, recCs: 0, csWeight: 0.288, elig: 4, total: "200 / 1.44T", fill: false },
-              { id: "SRF-500-24", desc: "Surf Excel 500g", p: "P1", ordQty: null, ordCs: null, ordT: null, recCs: 8, csWeight: 0.18, elig: 400, total: "8 / 1.44T", fill: true },
-              { id: "RIN-250-48", desc: "Rin Bar 250g", p: "P2", ordQty: null, ordCs: null, ordT: null, recCs: 10, csWeight: 0.06, elig: 1100, total: "10 / 0.60T", fill: true },
-            ],
-          },
-          {
-            id: "IND-24092",
-            label: "9T · 65.8% → 78.3%",
-            utilFrom: "65.8%",
-            utilTo: "78.3%",
-            weight: "9T",
-            priority: "Medium",
-            status: "ACCEPTED",
-            skus: [
-              { id: "LIF-125-72", desc: "Lifebuoy Total 125g", p: "P1", ordQty: 200, ordCs: 4, ordT: 1.80, recCs: 7, csWeight: 0.206, elig: 2, total: "9 / 1.80T", fill: false },
-              { id: "CLO-150-48", desc: "Closeup Red Hot 150g", p: "P2", ordQty: 180, ordCs: 4, ordT: 1.30, recCs: 7, csWeight: 0.206, elig: 0, total: "7 / 1.44T", fill: false },
-              { id: "PON-50-144", desc: "Ponds Dreamflower 50g", p: "P3", ordQty: 90, ordCs: 1, ordT: 0.62, recCs: 7, csWeight: 0.206, elig: 0, total: "7 / 1.44T", fill: false },
-              { id: "VIM-500-24", desc: "Vim Liquid 500ml", p: "P1", ordQty: null, ordCs: null, ordT: null, recCs: 5, csWeight: 0.468, elig: 350, total: "5 / 2.34T", fill: true },
-            ],
-          },
-        ],
       },
       {
         id: "chandigarh-dc",
         dc: "Chandigarh DC",
         location: "Chandigarh",
         shipments: 2,
-        children: [
-          {
-            id: "IND-24093",
-            label: "8T · 68.2% → 85.0%",
-            utilFrom: "68.2%",
-            utilTo: "85.0%",
-            weight: "8T",
-            priority: "Medium",
-            status: "PENDING",
-            skus: [
-              { id: "VIM-500-24", desc: "Vim Liquid 500ml", p: "P1", ordQty: 280, ordCs: 10, ordT: 3.2, recCs: 4, csWeight: 0.72, elig: 5, total: "280 / 3.2T", fill: false },
-              { id: "LIF-125-72", desc: "Lifebuoy Total 125g", p: "P2", ordQty: 120, ordCs: 2, ordT: 1.0, recCs: 3, csWeight: 0.5, elig: 2, total: "120 / 1.0T", fill: false },
-            ],
-          },
-        ],
       },
     ],
   },
   {
     id: "chandigarh",
     name: "Chandigarh Plant",
-    location: "Delhi",
-    dcs: 2,
-    shipments: 4,
-    pending: 3,
+    location: "Chandigarh",
+    dcs: 1,
+    shipments: 2,
+    pending: 1,
     children: [
       {
-        id: "chd-plant-dc",
+        id: "chd-dc",
         dc: "Chandigarh DC",
         location: "Chandigarh",
         shipments: 2,
-        children: [
-          {
-            id: "IND-24094",
-            label: "7T · 71.0% → 88.5%",
-            utilFrom: "71.0%",
-            utilTo: "88.5%",
-            weight: "7T",
-            priority: "High",
-            status: "PENDING",
-            skus: [
-              { id: "CLO-150-48", desc: "Closeup Red Hot 150g", p: "P1", ordQty: 160, ordCs: 4, ordT: 1.1, recCs: 5, csWeight: 0.275, elig: 3, total: "160 / 1.1T", fill: false },
-              { id: "PON-50-144", desc: "Ponds Dreamflower 50g", p: "P2", ordQty: 80, ordCs: 1, ordT: 0.5, recCs: 4, csWeight: 0.125, elig: 1, total: "80 / 0.5T", fill: false },
-            ],
-          },
-        ],
       },
     ],
   },
 ];
+
+export const mockShipmentDetailsByDc = {
+  "delhi_delhi-dc": [
+    {
+      id: "IND-24081",
+      shipmentId: "IND-24081",
+      label: "10T · 73.7% → 94.1%",
+      utilFrom: "73.7%",
+      utilTo: "94.1%",
+      weight: "10T",
+      priority: "High",
+      status: "ACCEPTED",
+      children: [
+        { id: "VIM-500-24", material: "VIM-500-24", materialDescription: "Vim Liquid 500ml", p: "P1", source: "FACTORY", ordQty: 320, ordCs: 13, ordT: 3.84, recCs: 0, csWeight: 0.288, elig: 6, maxElig: 6, total: "320 / 3.84T", fill: false },
+        { id: "LIF-125-72", material: "LIF-125-72", materialDescription: "Lifebuoy Total 125g", p: "P2", source: "FACTORY", ordQty: 150, ordCs: 3, ordT: 1.35, recCs: 0, csWeight: 0.45, elig: 0, maxElig: 0, total: "150 / 1.35T", fill: false },
+        { id: "CLO-150-48", material: "CLO-150-48", materialDescription: "Closeup Red Hot 150g", p: "P2", source: "DC TRANSFER", ordQty: 200, ordCs: 5, ordT: 1.44, recCs: 0, csWeight: 0.288, elig: 4, maxElig: 4, total: "200 / 1.44T", fill: false },
+        { id: "PON-50-144", material: "PON-50-144", materialDescription: "Ponds Dreamflower 50g", p: "P3", source: "FACTORY", ordQty: 50, ordCs: 1, ordT: 0.36, recCs: 0, csWeight: 0.36, elig: 2, maxElig: 2, total: "50 / 0.36T", fill: false },
+        { id: "DOV-100-48", material: "DOV-100-48", materialDescription: "Dove Cream Bar 100g", p: "P3", source: "FACTORY", ordQty: 80, ordCs: 2, ordT: 0.38, recCs: 0, csWeight: 0.19, elig: 2, maxElig: 2, total: "80 / 0.38T", fill: false },
+        { id: "SRF-500-24", material: "SRF-500-24", materialDescription: "Surf Excel 500g", p: "P1", source: "FACTORY", ordQty: null, ordCs: null, ordT: null, recCs: 5, csWeight: 0.288, elig: 400, maxElig: 405, total: "5 / 1.44T", fill: true },
+        { id: "RIN-250-48", material: "RIN-250-48", materialDescription: "Rin Bar 250g", p: "P2", source: "FACTORY", ordQty: null, ordCs: null, ordT: null, recCs: 2, csWeight: 0.30, elig: 1100, maxElig: 1102, total: "2 / 0.60T", fill: true },
+      ],
+    },
+    {
+      id: "IND-24092",
+      shipmentId: "IND-24092",
+      label: "9T · 65.8% → 78.3%",
+      utilFrom: "65.8%",
+      utilTo: "78.3%",
+      weight: "9T",
+      priority: "Medium",
+      status: "ACCEPTED",
+      children: [
+        { id: "LIF-125-72", material: "LIF-125-72", materialDescription: "Lifebuoy Total 125g", p: "P1", ordQty: 200, ordCs: 4, ordT: 1.80, recCs: 7, csWeight: 0.206, elig: 2, maxElig: 9, total: "9 / 1.80T", fill: false },
+        { id: "CLO-150-48", material: "CLO-150-48", materialDescription: "Closeup Red Hot 150g", p: "P2", ordQty: 180, ordCs: 4, ordT: 1.30, recCs: 7, csWeight: 0.206, elig: 0, maxElig: 7, total: "7 / 1.44T", fill: false },
+        { id: "PON-50-144", material: "PON-50-144", materialDescription: "Ponds Dreamflower 50g", p: "P3", ordQty: 90, ordCs: 1, ordT: 0.62, recCs: 7, csWeight: 0.206, elig: 0, maxElig: 7, total: "7 / 1.44T", fill: false },
+        { id: "VIM-500-24", material: "VIM-500-24", materialDescription: "Vim Liquid 500ml", p: "P1", ordQty: null, ordCs: null, ordT: null, recCs: 5, csWeight: 0.468, elig: 350, maxElig: 355, total: "5 / 2.34T", fill: true },
+      ],
+    },
+  ],
+  "delhi_chandigarh-dc": [
+    {
+      id: "IND-24093",
+      shipmentId: "IND-24093",
+      label: "8T · 68.2% → 85.0%",
+      utilFrom: "68.2%",
+      utilTo: "85.0%",
+      weight: "8T",
+      priority: "Medium",
+      status: "PENDING",
+      children: [
+        { id: "VIM-500-24", material: "VIM-500-24", materialDescription: "Vim Liquid 500ml", p: "P1", ordQty: 280, ordCs: 10, ordT: 3.2, recCs: 4, csWeight: 0.72, elig: 5, maxElig: 9, total: "280 / 3.2T", fill: false },
+        { id: "LIF-125-72", material: "LIF-125-72", materialDescription: "Lifebuoy Total 125g", p: "P2", ordQty: 120, ordCs: 2, ordT: 1.0, recCs: 3, csWeight: 0.5, elig: 2, maxElig: 5, total: "120 / 1.0T", fill: false },
+      ],
+    },
+  ],
+  "chandigarh_chd-dc": [
+    {
+      id: "IND-24094",
+      shipmentId: "IND-24094",
+      label: "7T · 71.0% → 88.5%",
+      utilFrom: "71.0%",
+      utilTo: "88.5%",
+      weight: "7T",
+      priority: "High",
+      status: "PENDING",
+      children: [
+        { id: "CLO-150-48", material: "CLO-150-48", materialDescription: "Closeup Red Hot 150g", p: "P1", ordQty: 160, ordCs: 4, ordT: 1.1, recCs: 5, csWeight: 0.275, elig: 3, maxElig: 8, total: "160 / 1.1T", fill: false },
+        { id: "PON-50-144", material: "PON-50-144", materialDescription: "Ponds Dreamflower 50g", p: "P2", ordQty: 80, ordCs: 1, ordT: 0.5, recCs: 4, csWeight: 0.125, elig: 1, maxElig: 5, total: "80 / 0.5T", fill: false },
+      ],
+    },
+  ],
+};
 
 export const filterDefs = [
   { label: "Source Plan", options: ["U918", "U920"] },

@@ -1,16 +1,25 @@
 import { useRef, useEffect } from "react";
+import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
 import styles from "./EChartWrapper.module.css";
 
 export default function EChartWrapper({ title, option, height = 140 }) {
   const ref = useRef(null);
 
-  // Force resize after mount so ECharts reads correct container dimensions
+  // Auto-resize on mount and container dimensions update
   useEffect(() => {
+    const chartInstance = ref.current?.getEchartsInstance();
+    const handleResize = () => chartInstance?.resize();
+
+    window.addEventListener("resize", handleResize);
     const timer = setTimeout(() => {
-      ref.current?.getEchartsInstance()?.resize();
+      chartInstance?.resize();
     }, 50);
-    return () => clearTimeout(timer);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      clearTimeout(timer);
+    };
   }, []);
 
   return (
@@ -20,8 +29,10 @@ export default function EChartWrapper({ title, option, height = 140 }) {
       </span>
       <ReactECharts
         ref={ref}
+        echarts={echarts}
         option={option}
         notMerge
+        lazyUpdate
         style={{ height, width: "100%" }}
         opts={{ renderer: "svg" }}
       />

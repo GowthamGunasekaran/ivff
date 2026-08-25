@@ -1,138 +1,159 @@
-import React from "react";
+import { useState, useMemo } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
-import IconButton from "@mui/material/IconButton";
-import CloseIcon from "@mui/icons-material/Close";
-import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
-import WarningAmberIcon from "@mui/icons-material/WarningAmber";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableCell from "@mui/material/TableCell";
-import TableHead from "@mui/material/TableHead";
-import TableRow from "@mui/material/TableRow";
-import { manifest, validations } from "../../utils/constants";
+import CircularProgress from "@mui/material/CircularProgress";
+import { useAppContext } from "../../AppContext";
+import ReviewHeader from "./ReviewHeader";
+import ReviewManifest from "./ReviewManifest";
+import ReviewValidation from "./ReviewValidation";
 import styles from "./ReviewDialog.module.css";
 
-function ReviewHeader({ ind, dcLabel, onClose }) {
-  return (
-    <div className={styles.headerContainer}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-        <div>
-          <div className={styles.title}>
-            Review Final Plan — {ind.id}
-          </div>
-          <div className={styles.subtitle}>
-            Delhi Plant → {dcLabel} · 32T SXL · FTL
-          </div>
-        </div>
-        <IconButton onClick={onClose} sx={{ color: "white", p: 0.5 }}>
-          <CloseIcon fontSize="small" />
-        </IconButton>
-      </div>
-      <div className={styles.kpiRow}>
-        {[
-          { label: "Current Util", value: "73.7%" },
-          { label: "Final Util", value: "94.1%", green: false },
-          { label: "Util Gain", value: "+20.4%", green: true },
-          { label: "Payload Gain", value: "+2.0T", green: true },
-          { label: "Revenue-Opp", value: "₹2.8L" },
-          { label: "Freshness Risk", value: "HIGH", amber: true },
-        ].map((k) => (
-          <div key={k.label}>
-            <div className={styles.kpiLabel}>{k.label}</div>
-            <div className={`${styles.kpiValue} ${k.green ? styles.kpiValueGreen : k.amber ? styles.kpiValueAmber : styles.kpiValueWhite}`}>
-              {k.value}
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+/**
+ * Optimistic Manifest & Metric Calculation
+ * Computes manifest table rows, totals, and shipment weights in a single pass
+ */
+export function computeManifest(skus) {
+  let totalFinal = 0;
+  let totalWeight = 0;
+  let totalTonnage = 0;
+  let totalAddedT = 0;
 
-function ReviewManifest() {
-  const totalFinal = 31, totalWeight = 9414, totalTonnage = 9.41;
-  return (
-    <div className={styles.manifestContainer}>
-      <div className={styles.sectionTitle}>
-        CONSOLIDATED MANIFEST
-      </div>
-      <Table size="small" sx={{ tableLayout: "fixed" }}>
-        <TableHead>
-          <TableRow sx={{ borderBottom: "1px solid #eceef3" }}>
-            {["CBU (CBU Description)", "Source", "Orig Qty", "Rec Qty", "Final", "Weight", "Tonnage"].map((h, i) => (
-              <TableCell key={h} className={styles.tableHeader} sx={{ width: i === 0 ? 160 : undefined }}>{h}</TableCell>
-            ))}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {manifest.map((row) => (
-            <TableRow key={row.cbu} sx={{ "&:hover": { background: "#f7f9fc" } }}>
-              <TableCell className={`${styles.tableCell} ${styles.tableCellPadded}`}>
-                <div className={`${styles.cbuName} ${row.tag === "AI" ? styles.cbuNameAi : styles.cbuNameOrig}`}>{row.cbu}</div>
-                <span className={`${styles.tagBadge} ${row.tag === "AI" ? styles.tagBadgeAi : styles.tagBadgeOrig}`}>
-                  {row.tag === "AI" ? "AI RECOMMENDATION" : "ORIGINAL"}
-                </span>
-              </TableCell>
-              <TableCell className={`${styles.tableCell} ${styles.tableCellSecondary}`}>{row.source}</TableCell>
-              <TableCell className={styles.tableCell} sx={{ fontWeight: row.origQty !== "—" ? 700 : 400, textAlign: "center" }}>{row.origQty}</TableCell>
-              <TableCell className={`${styles.tableCell} ${styles.tableCellSecondary}`} sx={{ textAlign: "center" }}>{row.recQty}</TableCell>
-              <TableCell className={styles.tableCell} sx={{ fontWeight: 700, textAlign: "center", color: "#1f2430" }}>{row.final}</TableCell>
-              <TableCell className={`${styles.tableCell} ${styles.tableCellSecondary}`} sx={{ textAlign: "right" }}>{row.weight}</TableCell>
-              <TableCell className={`${styles.tableCell} ${styles.tableCellSecondary}`} sx={{ textAlign: "right" }}>{row.tonnage}</TableCell>
-            </TableRow>
-          ))}
-          <TableRow className={styles.tableFooterRow}>
-            <TableCell colSpan={4} className={styles.tableFooterCell} sx={{ borderBottom: "none" }}>TOTAL</TableCell>
-            <TableCell className={`${styles.tableFooterCell} ${styles.tableFooterValLg}`} sx={{ textAlign: "center", borderBottom: "none" }}>{totalFinal}</TableCell>
-            <TableCell className={`${styles.tableFooterCell} ${styles.tableFooterVal}`} sx={{ textAlign: "right", borderBottom: "none" }}>{totalWeight.toLocaleString()}</TableCell>
-            <TableCell className={`${styles.tableFooterCell} ${styles.tableFooterVal}`} sx={{ textAlign: "right", borderBottom: "none" }}>{totalTonnage}</TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
-  );
-}
+  const rows = (skus || []).map((sku) => {
+    const isAi = !!sku.fill;
+    const name = sku.desc || sku.materialDescription || sku.id;
+    const source = sku.source || (isAi ? "FACTORY" : "FACTORY");
+    const origCs = sku.ordCs != null ? sku.ordCs : null;
+    const recCs = sku.recCs != null ? sku.recCs : null;
+    const finalCs = (origCs || 0) + (recCs || 0);
+    const weightKg = Math.round(finalCs * (sku.csWeight || 0.288) * 1000);
+    const tonnage = parseFloat((finalCs * (sku.csWeight || 0.288)).toFixed(2));
 
-function ReviewValidation() {
-  return (
-    <div className={styles.validationContainer}>
-      <div className={styles.validationTitle}>
-        VALIDATION
-      </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        {validations.map((v) => (
-          <div key={v.label} className={styles.validationRow}>
-            <div>
-              <div className={styles.validationLabel}>{v.label}</div>
-              <div className={`${styles.validationDetail} ${v.ok ? styles.validationDetailOk : (v.detail === "HIGH" ? styles.validationDetailHigh : styles.validationDetailWarn)}`}>{v.detail}</div>
-            </div>
-            {v.ok
-              ? <CheckCircleOutlineIcon sx={{ fontSize: 18, color: "#2e9e5b" }} />
-              : <WarningAmberIcon sx={{ fontSize: 18, color: "#f59e0b" }} />}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+    totalFinal += finalCs;
+    totalWeight += weightKg;
+    totalTonnage += tonnage;
+    totalAddedT += (recCs || 0) * (sku.csWeight || 0.288);
+
+    return {
+      cbu: name,
+      material: sku.id || sku.material,
+      source,
+      tag: isAi ? "AI" : "ORIGINAL",
+      origQty: origCs != null ? origCs : "—",
+      recQty: recCs != null && recCs > 0 ? recCs : "—",
+      final: finalCs,
+      weight: weightKg,
+      tonnage,
+      isAi,
+    };
+  });
+
+  return {
+    rows,
+    totalFinal,
+    totalWeight,
+    totalTonnage: parseFloat(totalTonnage.toFixed(2)),
+    totalAddedT,
+  };
 }
 
 export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
+  const { confirmAndDispatchPlan } = useAppContext();
+  const [isDispatching, setIsDispatching] = useState(false);
+
+  const skus = useMemo(() => (ind ? ind.children || ind.skus || [] : []), [ind]);
+
+  const manifestData = useMemo(() => computeManifest(skus), [skus]);
+
+  const metrics = useMemo(() => {
+    if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0 };
+
+    const capacityT = parseFloat(ind.weight) || 10;
+    const baseUtilNum = parseFloat(ind.utilFrom) || 73.7;
+    const baseWeightT = (baseUtilNum / 100) * capacityT;
+    const addedWeightT = manifestData.totalAddedT;
+    const finalWeightT = baseWeightT + addedWeightT;
+    const finalUtil = Math.min(100, Math.round((finalWeightT / capacityT) * 1000) / 10);
+
+    return {
+      baseWeightT,
+      addedWeightT,
+      finalWeightT,
+      finalUtil,
+    };
+  }, [ind, manifestData]);
+
   if (!ind) return null;
+
+  const handleConfirmDispatch = async () => {
+    setIsDispatching(true);
+
+    const manifestPayload = manifestData.rows.map((row) => ({
+      cbu: row.cbu,
+      material: row.material,
+      source: row.source,
+      tag: row.tag,
+      origQty: row.origQty === "—" ? null : row.origQty,
+      recQty: row.recQty === "—" ? null : row.recQty,
+      final: row.final,
+      weight: row.weight,
+      tonnage: row.tonnage,
+    }));
+
+    const summaryPayload = {
+      shipmentId: ind.id,
+      dc: dcLabel,
+      currentUtil: ind.utilFrom || "73.7%",
+      finalUtil: ind.utilTo || `${metrics.finalUtil.toFixed(1)}%`,
+      utilGain: `+${Math.max(0, parseFloat(ind.utilTo || metrics.finalUtil) - parseFloat(ind.utilFrom || 73.7)).toFixed(1)}%`,
+      payloadGain: `+${metrics.addedWeightT.toFixed(1)}T`,
+      totalCases: manifestData.totalFinal,
+      totalWeight: manifestData.totalWeight,
+      totalTonnage: manifestData.totalTonnage,
+      status: "ACCEPTED",
+    };
+
+    try {
+      await confirmAndDispatchPlan(ind.id, manifestPayload, summaryPayload);
+      onClose();
+    } catch (error) {
+      console.error("Failed to confirm & dispatch:", error);
+    } finally {
+      setIsDispatching(false);
+    }
+  };
+
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="lg" fullWidth PaperProps={{ sx: { borderRadius: "12px", overflow: "hidden" } }}>
-      <ReviewHeader ind={ind} dcLabel={dcLabel} onClose={onClose} />
+    <Dialog
+      open={open}
+      onClose={onClose}
+      maxWidth="lg"
+      fullWidth
+      PaperProps={{
+        sx: {
+          borderRadius: "14px",
+          overflow: "hidden",
+          boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
+        },
+      }}
+    >
+      <ReviewHeader ind={ind} dcLabel={dcLabel} onClose={onClose} metrics={metrics} />
       <DialogContent sx={{ p: 0 }}>
-        <div style={{ display: "flex", gap: 0 }}>
-          <ReviewManifest />
-          <ReviewValidation />
+        <div style={{ display: "flex", gap: 0, minHeight: 380 }}>
+          <ReviewManifest manifestData={manifestData} />
+          <ReviewValidation ind={ind} metrics={metrics} totalCases={manifestData.totalFinal} />
         </div>
         <div className={styles.actionsContainer}>
-          <button onClick={onClose} className={styles.btnBack}>
+          <button onClick={onClose} disabled={isDispatching} className={styles.btnBack}>
             Back To Edit
           </button>
-          <button className={styles.btnConfirm}>
-            Confirm &amp; Dispatch
+          <button
+            className={styles.btnConfirm}
+            onClick={handleConfirmDispatch}
+            disabled={isDispatching}
+            style={{ display: "flex", alignItems: "center", gap: 6 }}
+          >
+            {isDispatching && <CircularProgress size={14} sx={{ color: "white" }} />}
+            {isDispatching ? "Dispatching..." : "Confirm & Dispatch"}
           </button>
         </div>
       </DialogContent>

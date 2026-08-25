@@ -23,7 +23,6 @@
 }
 
 .cardTitle {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: #767c88;
   font-size: 11px;
@@ -69,7 +68,6 @@
 }
 
 .metricLabel {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   color: #8a90a0;
   font-size: 9.5px;
@@ -82,7 +80,6 @@
 }
 
 .metricValue {
-  font-family: 'Segoe UI', sans-serif;
   font-weight: 700;
   font-size: 17px;
   letter-spacing: -0.3px;
