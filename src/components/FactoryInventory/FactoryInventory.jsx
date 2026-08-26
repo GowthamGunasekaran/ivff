@@ -118,28 +118,31 @@ export default function FactoryInventory() {
       <div style={{ overflowY: "auto", flex: 1 }}>
         <Table size="small" sx={{ tableLayout: "fixed" }}>
           <TableBody>
-            {factories.map((row) => (
-              <Fragment key={row.name}>
-                <FactoryRow
-                  row={row}
-                  expanded={!!factoryExpanded[row.name]}
-                  onToggle={() => toggleFactory(row.name)}
-                />
-                <TableRow>
-                  <TableCell colSpan={4} sx={{ p: 0, border: "none" }}>
-                    <Collapse in={!!factoryExpanded[row.name]} timeout="auto" unmountOnExit>
-                      <Table size="small">
-                        <TableBody>
-                          {(factoryDetails[row.name] || []).map((d) => (
-                            <DetailRow key={d.dc} detail={d} />
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </Collapse>
-                  </TableCell>
-                </TableRow>
-              </Fragment>
-            ))}
+            {(factories || []).map((row) => {
+              const details = row.children || (factoryDetails && factoryDetails[row.name]) || [];
+              return (
+                <Fragment key={row.name}>
+                  <FactoryRow
+                    row={row}
+                    expanded={!!factoryExpanded[row.name]}
+                    onToggle={() => toggleFactory(row.name)}
+                  />
+                  <TableRow>
+                    <TableCell colSpan={4} sx={{ p: 0, border: "none" }}>
+                      <Collapse in={!!factoryExpanded[row.name]} timeout="auto" unmountOnExit>
+                        <Table size="small">
+                          <TableBody>
+                            {details.map((d) => (
+                              <DetailRow key={d.dc} detail={d} />
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </Collapse>
+                    </TableCell>
+                  </TableRow>
+                </Fragment>
+              );
+            })}
           </TableBody>
         </Table>
       </div>

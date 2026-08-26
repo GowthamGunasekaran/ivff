@@ -1,8 +1,8 @@
+import { memo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
-import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -12,8 +12,13 @@ import { StatusBadge } from "./TableBadges";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
-export function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
-  const priorityClass = ind.priority === "High" ? styles.indPriorityHigh : ind.priority === "Medium" ? styles.indPriorityMedium : styles.indPriorityLow;
+export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
+  const priorityClass =
+    ind.priority === "High"
+      ? styles.indPriorityHigh
+      : ind.priority === "Medium"
+      ? styles.indPriorityMedium
+      : styles.indPriorityLow;
   const skus = ind.children || ind.skus || [];
 
   const totalOrdQty = skus.reduce((s, r) => s + (r.ordQty || 0), 0);
@@ -31,19 +36,18 @@ export function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.shipment }}>
         <span className={styles.indId}>{ind.id}</span>
-        <div className={styles.indSub}>
+      </TableCell>
+      <TableCell className={styles.indCell} sx={{ width: COL.desc }}>
+        <div className={styles.indDescContent}>
           <span>{ind.weight} · </span><span className={styles.indUtil}>{ind.utilFrom}</span>
           <span className={styles.indUtil}> → </span><span className={styles.indUtilTarget}>{ind.utilTo}</span>
         </div>
       </TableCell>
-      <TableCell className={styles.indCell} sx={{ width: COL.desc }} />
       <TableCell className={styles.indCell} sx={{ width: COL.priority }}>
         <span className={`${styles.indPriority} ${priorityClass}`}>{ind.priority}</span>
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.ordQty }}>
-        <span className={styles.indOrdQty}>
-          {totalOrdQty}
-        </span>
+        <span className={styles.indOrdQty}>{totalOrdQty}</span>
         <span className={styles.indOrdQtySub}> / {totalOrdCs}cs /{ind.weight}</span>
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.recQty }}>
@@ -67,17 +71,17 @@ export function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
       </TableCell>
     </TableRow>
   );
-}
+});
 
-export function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, dcLabel }) {
+export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, dcLabel }) {
   const skus = ind.children || ind.skus || [];
 
   return (
     <>
       <IndRowMain ind={ind} open={open} onToggle={onToggle} searchTerm={searchTerm} onReview={onReview} dcLabel={dcLabel} />
-      <TableRow>
-        <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
-          <Collapse in={open} timeout="auto" unmountOnExit>
+      {open && (
+        <TableRow>
+          <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
             <Table size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
               <TableBody>
                 {skus.map((sku, si) => {
@@ -107,11 +111,11 @@ export function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview,
                 </TableRow>
               </TableBody>
             </Table>
-          </Collapse>
-        </TableCell>
-      </TableRow>
+          </TableCell>
+        </TableRow>
+      )}
     </>
   );
-}
+});
 
 export default IndRow;

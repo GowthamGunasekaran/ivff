@@ -1,343 +1,343 @@
 /* Badges */
 .badgeP {
-  font-weight: 700;
-  font-size: 9px;
-  padding: 2px 7px;
-  border-radius: 3px;
+    font-weight: 700;
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 3px;
 }
 
 .badgeFill {
-  background-color: #e4ebff;
-  color: var(--color-primary, #2c4cd3);
-  font-weight: 700;
-  font-size: 8px;
-  padding: 1px 5px;
-  border-radius: 3px;
-  margin-left: 4px;
+    background-color: #e4ebff;
+    color: var(--color-primary, #2c4cd3);
+    font-weight: 700;
+    font-size: 8px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    margin-left: 4px;
 }
 
 .badgeStatus {
-  font-weight: 700;
-  font-size: 10px;
-  padding: 2px 8px;
-  border-radius: 4px;
+    font-weight: 700;
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px;
 }
 
 /* Sku Row */
 .skuRow {
-  background: white;
+    background: white;
 }
 
 .skuRow:hover td {
-  background: #f7f9fc !important;
+    background: #f7f9fc !important;
 }
 
 .skuRowHighlight:hover td {
-  background: rgba(44, 76, 211, 0.09) !important;
+    background: rgba(44, 76, 211, 0.09) !important;
 }
 
 .skuCell {
-  padding: 5px 8px !important;
-  border: none !important;
-  border-bottom: 1px solid #eceef3 !important;
-  font-size: 11px !important;
-  vertical-align: middle !important;
-  background: white;
+    padding: 5px 8px !important;
+    border: none !important;
+    border-bottom: 1px solid #eceef3 !important;
+    font-size: 11px !important;
+    vertical-align: middle !important;
+    background: white;
 }
 
 .skuCellHighlight {
-  background: rgba(44, 76, 211, 0.06) !important;
+    background: rgba(44, 76, 211, 0.06) !important;
 }
 
 .skuId {
-  font-weight: 700;
-  font-size: 11px;
-  color: #1f2430;
+    font-weight: 700;
+    font-size: 11px;
+    color: #1f2430;
 }
 
 .skuIdHighlight {
-  color: #2c4cd3;
+    color: #2c4cd3;
 }
 
 .skuDesc {
-  color: #5a6072;
-  font-size: 10px;
+    color: #5a6072;
+    font-size: 10px;
 }
 
 .skuOrdQty {
-  font-weight: 700;
-  color: #1f2430;
+    font-weight: 700;
+    color: #1f2430;
 }
 
 .skuOrdQtySub {
-  font-weight: 400;
-  color: #8a90a0;
-  font-size: 10px;
+    font-weight: 400;
+    color: #8a90a0;
+    font-size: 10px;
 }
 
 .skuTextEmpty {
-  color: #8a90a0;
+    color: #8a90a0;
 }
 
 .skuInputRecQty {
-  width: 46px;
-  text-align: center;
-  border: 1.5px solid #d9dce1;
-  border-radius: 4px;
-  padding: 2px 4px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #2c4cd3;
-  outline: none;
-  background: white;
+    width: 46px;
+    text-align: center;
+    border: 1.5px solid #d9dce1;
+    border-radius: 4px;
+    padding: 2px 4px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #2c4cd3;
+    outline: none;
+    background: white;
 }
 
 .skuInputRecQty:focus {
-  border-color: #2c4cd3;
+    border-color: #2c4cd3;
 }
 
 .skuRecQtySub {
-  font-size: 10px;
-  color: #8a90a0;
+    font-size: 10px;
+    color: #8a90a0;
 }
 
 .skuElig {
-  color: #1f2430;
-  text-align: center;
+    color: #1f2430;
+    text-align: center;
 }
 
 .skuEligEmpty {
-  color: #8a90a0;
-  text-align: center;
+    color: #8a90a0;
+    text-align: center;
 }
 
 .skuTotal {
-  font-size: 10px;
-  color: #5a6072;
+    font-size: 10px;
+    color: #5a6072;
 }
 
 .skuCloseIcon {
-  font-size: 14px !important;
-  color: #8a90a0 !important;
-  cursor: pointer;
+    font-size: 14px !important;
+    color: #8a90a0 !important;
+    cursor: pointer;
 }
 
 .skuCloseIcon:hover {
-  color: #ef4b5c !important;
+    color: #ef4b5c !important;
 }
 
 .skuCellAdd {
-  padding: 6px 8px 8px 28px !important;
-  border: none !important;
-  background: white !important;
+    padding: 6px 8px 8px 28px !important;
+    border: none !important;
+    background: white !important;
 }
 
 .skuBtnAdd {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-weight: 600;
-  font-size: 11px;
-  color: #2c4cd3;
-  background: transparent;
-  border: 1px dashed #2c4cd3;
-  border-radius: 6px;
-  padding: 4px 12px;
-  cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-weight: 600;
+    font-size: 11px;
+    color: #2c4cd3;
+    background: transparent;
+    border: 1px dashed #2c4cd3;
+    border-radius: 6px;
+    padding: 4px 12px;
+    cursor: pointer;
 }
 
 .skuIconAdd {
-  font-size: 14px !important;
+    font-size: 14px !important;
 }
 
 /* Ind (Shipment) Row */
 .indRow {
-  cursor: pointer;
-  background: #fff;
+    cursor: pointer;
+    background: #fff;
 }
 
 .indRow:hover td {
-  background: #f4f7ff !important;
+    background: #f4f7ff !important;
 }
 
 .indCell {
-  padding: 7px 8px !important;
-  border: none !important;
-  border-bottom: 1px solid #eceef3 !important;
-  vertical-align: middle !important;
+    padding: 7px 8px !important;
+    border: none !important;
+    border-bottom: 1px solid #eceef3 !important;
+    vertical-align: middle !important;
 }
 
 .indCellExpand {
-  padding: 7px 4px !important;
+    padding: 7px 4px !important;
 }
 
 .indIconExpand {
-  font-size: 14px !important;
-  color: #5a6072 !important;
+    font-size: 14px !important;
+    color: #5a6072 !important;
 }
 
 .indId {
-  font-weight: 700;
-  font-size: 12px;
-  color: #1f2430;
+    font-weight: 700;
+    font-size: 12px;
+    color: #1f2430;
 }
 
 .indSub {
-  font-size: 9px;
-  margin-top: 2px;
-  color: #8a90a0;
+    font-size: 9px;
+    margin-top: 2px;
+    color: #8a90a0;
 }
 
 .indUtil {
-  color: #5a6072;
+    color: #5a6072;
 }
 
 .indUtilTarget {
-  font-weight: 700;
-  color: #2e9e5b;
+    font-weight: 700;
+    color: #2e9e5b;
 }
 
 .indPriority {
-  font-weight: 700;
-  font-size: 11px;
+    font-weight: 700;
+    font-size: 11px;
 }
 
 .indPriorityHigh {
-  color: #ef4b5c;
+    color: #ef4b5c;
 }
 
 .indPriorityMedium {
-  color: #f59e0b;
+    color: #f59e0b;
 }
 
 .indPriorityLow {
-  color: #5a6072;
+    color: #5a6072;
 }
 
 .indOrdQty {
-  font-weight: 700;
-  font-size: 12px;
-  color: #1f2430;
+    font-weight: 700;
+    font-size: 12px;
+    color: #1f2430;
 }
 
 .indOrdQtySub {
-  font-size: 10px;
-  color: #8a90a0;
+    font-size: 10px;
+    color: #8a90a0;
 }
 
 .indRecQty {
-  font-weight: 700;
-  font-size: 11px;
-  color: #2e9e5b;
+    font-weight: 700;
+    font-size: 11px;
+    color: #2e9e5b;
 }
 
 .indRecQtySub {
-  font-size: 10px;
-  color: #8a90a0;
+    font-size: 10px;
+    color: #8a90a0;
 }
 
 .indBtnReview {
-  font-weight: 700;
-  font-size: 12px;
-  color: white;
-  background: #2c4cd3;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 14px;
-  cursor: pointer;
+    font-weight: 700;
+    font-size: 12px;
+    color: white;
+    background: #2c4cd3;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 14px;
+    cursor: pointer;
 }
 
 /* Dc Row */
 .dcRow {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 .dcRow:hover td {
-  background: #e8edf5 !important;
+    background: #e8edf5 !important;
 }
 
 .dcCell {
-  padding: 5px 8px !important;
-  border: none !important;
-  border-top: 1px solid #d9dce1 !important;
-  border-bottom: 1px solid #d9dce1 !important;
-  background: #f1f5f9 !important;
-  vertical-align: middle !important;
+    padding: 5px 8px !important;
+    border: none !important;
+    border-top: 1px solid #d9dce1 !important;
+    border-bottom: 1px solid #d9dce1 !important;
+    background: #f1f5f9 !important;
+    vertical-align: middle !important;
 }
 
 .dcCellExpand {
-  padding: 5px 4px !important;
+    padding: 5px 4px !important;
 }
 
 .dcIconExpand {
-  font-size: 13px !important;
-  color: #5a6072 !important;
+    font-size: 13px !important;
+    color: #5a6072 !important;
 }
 
 .dcName {
-  font-weight: 700;
-  font-size: 11px;
-  color: #1f2430;
+    font-weight: 700;
+    font-size: 11px;
+    color: #1f2430;
 }
 
 .dcLocation {
-  font-size: 9px;
-  color: #5a6072;
+    font-size: 9px;
+    color: #5a6072;
 }
 
 /* Plant Row */
 .plantRow {
-  cursor: pointer;
+    cursor: pointer;
 }
 
 .plantRow:hover td {
-  background: #1a3278 !important;
+    background: #1a3278 !important;
 }
 
 .plantCell {
-  padding: 0 8px !important;
-  border: none !important;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
-  background: #1e3a8a !important;
-  vertical-align: middle !important;
-  height: 28px !important;
+    padding: 0 8px !important;
+    border: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    background: #1e3a8a !important;
+    vertical-align: middle !important;
+    height: 28px !important;
 }
 
 .plantCellExpand {
-  padding: 0 4px !important;
+    padding: 0 4px !important;
 }
 
 .plantIconExpand {
-  font-size: 14px !important;
-  color: rgba(255, 255, 255, 0.8) !important;
+    font-size: 14px !important;
+    color: rgba(255, 255, 255, 0.8) !important;
 }
 
 .plantName {
-  font-weight: 700;
-  font-size: 12px;
-  color: white;
-  letter-spacing: 0.24px;
+    font-weight: 700;
+    font-size: 12px;
+    color: white;
+    letter-spacing: 0.24px;
 }
 
 .plantLocation {
-  font-size: 9px;
-  color: rgba(255, 255, 255, 0.4);
+    font-size: 9px;
+    color: rgba(255, 255, 255, 0.4);
 }
 
 .plantBadgeNeutral {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.65);
-  font-weight: 700;
-  font-size: 8px;
-  padding: 1px 6px;
-  border-radius: 3px;
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.65);
+    font-weight: 700;
+    font-size: 8px;
+    padding: 1px 6px;
+    border-radius: 3px;
 }
 
 .plantBadgeWarning {
-  background: rgba(245, 158, 11, 0.16);
-  color: #fcd34d;
-  font-weight: 700;
-  font-size: 8px;
-  padding: 1px 6px;
-  border-radius: 3px;
+    background: rgba(245, 158, 11, 0.16);
+    color: #fcd34d;
+    font-weight: 700;
+    font-size: 8px;
+    padding: 1px 6px;
+    border-radius: 3px;
 }

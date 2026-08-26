@@ -1,8 +1,8 @@
+import { memo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
-import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -10,7 +10,7 @@ import { DcRow } from "./DcRow";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
-export function PlantRow({
+export const PlantRow = memo(function PlantRow({
   plant,
   openPlant,
   onTogglePlant,
@@ -58,9 +58,9 @@ export function PlantRow({
         </TableCell>
       </TableRow>
 
-      <TableRow>
-        <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
-          <Collapse in={openPlant} timeout="auto" unmountOnExit>
+      {openPlant && (
+        <TableRow>
+          <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
             <Table size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
               <TableBody>
                 {dcs.map((dc) => {
@@ -90,11 +90,12 @@ export function PlantRow({
                 })}
               </TableBody>
             </Table>
-          </Collapse>
-        </TableCell>
-      </TableRow>
+          </TableCell>
+        </TableRow>
+      )}
     </>
   );
-}
+});
 
 export default PlantRow;
+

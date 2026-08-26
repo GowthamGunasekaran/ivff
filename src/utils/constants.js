@@ -73,11 +73,56 @@ export const chartsData = {
 };
 
 export const initFactories = [
-  { name: "Delhi Plant", code: "U918 · Delhi", stock: "47K", eligible: "8.3K" },
-  { name: "Chandigarh Plant", code: "U918 · Delhi", stock: "47K", eligible: "8.3K" },
-  { name: "Mumbai Plant", code: "U918 · Delhi", stock: "27K", eligible: "2.1K" },
-  { name: "Pune Plant", code: "U918 · Delhi", stock: "27K", eligible: "2.1K" },
-  { name: "Agra Plant", code: "U918 · Delhi", stock: "27K", eligible: "2.1K" },
+  {
+    name: "Delhi Plant",
+    code: "U918 · Delhi",
+    stock: "47K",
+    eligible: "8.3K",
+    children: [
+      { dc: "Delhi DC", location: "Delhi", stock: "23K", eligible: "4.1K" },
+      { dc: "Noida DC", location: "UP", stock: "24K", eligible: "4.2K" },
+    ],
+  },
+  {
+    name: "Chandigarh Plant",
+    code: "U918 · Delhi",
+    stock: "47K",
+    eligible: "8.3K",
+    children: [
+      { dc: "Chandigarh DC", location: "Punjab", stock: "22K", eligible: "3.9K" },
+      { dc: "Amritsar DC", location: "Punjab", stock: "25K", eligible: "4.4K" },
+    ],
+  },
+  {
+    name: "Mumbai Plant",
+    code: "U918 · Delhi",
+    stock: "27K",
+    eligible: "2.1K",
+    children: [
+      { dc: "Mumbai DC", location: "Maharashtra", stock: "15K", eligible: "1.2K" },
+      { dc: "Pune DC", location: "Maharashtra", stock: "12K", eligible: "0.9K" },
+    ],
+  },
+  {
+    name: "Pune Plant",
+    code: "U918 · Delhi",
+    stock: "27K",
+    eligible: "2.1K",
+    children: [
+      { dc: "Pune DC", location: "Maharashtra", stock: "18K", eligible: "1.5K" },
+      { dc: "Nashik DC", location: "Maharashtra", stock: "9K", eligible: "0.6K" },
+    ],
+  },
+  {
+    name: "Agra Plant",
+    code: "U918 · Delhi",
+    stock: "27K",
+    eligible: "2.1K",
+    children: [
+      { dc: "Agra DC", location: "UP", stock: "14K", eligible: "1.1K" },
+      { dc: "Mathura DC", location: "UP", stock: "13K", eligible: "1.0K" },
+    ],
+  },
 ];
 
 export const initFactoryDetails = {
@@ -112,18 +157,8 @@ export const initPlantHierarchy = [
     shipments: 4,
     pending: 3,
     children: [
-      {
-        id: "delhi-dc",
-        dc: "Delhi DC",
-        location: "Delhi",
-        shipments: 2,
-      },
-      {
-        id: "chandigarh-dc",
-        dc: "Chandigarh DC",
-        location: "Chandigarh",
-        shipments: 2,
-      },
+      { id: "delhi-dc", dc: "Delhi DC", location: "Delhi", shipments: 2 },
+      { id: "chandigarh-dc", dc: "Chandigarh DC", location: "Chandigarh", shipments: 2 },
     ],
   },
   {
@@ -134,12 +169,151 @@ export const initPlantHierarchy = [
     shipments: 2,
     pending: 1,
     children: [
-      {
-        id: "chd-dc",
-        dc: "Chandigarh DC",
-        location: "Chandigarh",
-        shipments: 2,
-      },
+      { id: "chd-dc", dc: "Chandigarh DC", location: "Chandigarh", shipments: 2 },
+    ],
+  },
+  {
+    id: "mumbai",
+    name: "Mumbai Plant",
+    location: "Maharashtra",
+    dcs: 2,
+    shipments: 3,
+    pending: 2,
+    children: [
+      { id: "mumbai-dc", dc: "Mumbai DC", location: "Maharashtra", shipments: 2 },
+      { id: "pune-dc", dc: "Pune DC", location: "Maharashtra", shipments: 1 },
+    ],
+  },
+  {
+    id: "pune",
+    name: "Pune Plant",
+    location: "Maharashtra",
+    dcs: 2,
+    shipments: 3,
+    pending: 1,
+    children: [
+      { id: "pune-dc2", dc: "Pune DC", location: "Maharashtra", shipments: 2 },
+      { id: "nashik-dc", dc: "Nashik DC", location: "Maharashtra", shipments: 1 },
+    ],
+  },
+  {
+    id: "agra",
+    name: "Agra Plant",
+    location: "Uttar Pradesh",
+    dcs: 2,
+    shipments: 2,
+    pending: 1,
+    children: [
+      { id: "agra-dc", dc: "Agra DC", location: "UP", shipments: 1 },
+      { id: "mathura-dc", dc: "Mathura DC", location: "UP", shipments: 1 },
+    ],
+  },
+  {
+    id: "kolkata",
+    name: "Kolkata Plant",
+    location: "West Bengal",
+    dcs: 2,
+    shipments: 3,
+    pending: 2,
+    children: [
+      { id: "kolkata-dc", dc: "Kolkata DC", location: "WB", shipments: 2 },
+      { id: "howrah-dc", dc: "Howrah DC", location: "WB", shipments: 1 },
+    ],
+  },
+  {
+    id: "chennai",
+    name: "Chennai Plant",
+    location: "Tamil Nadu",
+    dcs: 2,
+    shipments: 4,
+    pending: 2,
+    children: [
+      { id: "chennai-dc", dc: "Chennai DC", location: "TN", shipments: 2 },
+      { id: "madurai-dc", dc: "Madurai DC", location: "TN", shipments: 2 },
+    ],
+  },
+  {
+    id: "bengaluru",
+    name: "Bengaluru Plant",
+    location: "Karnataka",
+    dcs: 2,
+    shipments: 3,
+    pending: 1,
+    children: [
+      { id: "blr-dc", dc: "Bengaluru DC", location: "KA", shipments: 2 },
+      { id: "mysuru-dc", dc: "Mysuru DC", location: "KA", shipments: 1 },
+    ],
+  },
+  {
+    id: "hyderabad",
+    name: "Hyderabad Plant",
+    location: "Telangana",
+    dcs: 2,
+    shipments: 3,
+    pending: 2,
+    children: [
+      { id: "hyd-dc", dc: "Hyderabad DC", location: "TS", shipments: 2 },
+      { id: "sec-dc", dc: "Secunderabad DC", location: "TS", shipments: 1 },
+    ],
+  },
+  {
+    id: "ahmedabad",
+    name: "Ahmedabad Plant",
+    location: "Gujarat",
+    dcs: 2,
+    shipments: 3,
+    pending: 1,
+    children: [
+      { id: "ahm-dc", dc: "Ahmedabad DC", location: "GJ", shipments: 2 },
+      { id: "surat-dc", dc: "Surat DC", location: "GJ", shipments: 1 },
+    ],
+  },
+  {
+    id: "jaipur",
+    name: "Jaipur Plant",
+    location: "Rajasthan",
+    dcs: 2,
+    shipments: 2,
+    pending: 1,
+    children: [
+      { id: "jaipur-dc", dc: "Jaipur DC", location: "RJ", shipments: 1 },
+      { id: "jodhpur-dc", dc: "Jodhpur DC", location: "RJ", shipments: 1 },
+    ],
+  },
+  {
+    id: "lucknow",
+    name: "Lucknow Plant",
+    location: "Uttar Pradesh",
+    dcs: 2,
+    shipments: 2,
+    pending: 1,
+    children: [
+      { id: "lko-dc", dc: "Lucknow DC", location: "UP", shipments: 1 },
+      { id: "kanpur-dc", dc: "Kanpur DC", location: "UP", shipments: 1 },
+    ],
+  },
+  {
+    id: "indore",
+    name: "Indore Plant",
+    location: "Madhya Pradesh",
+    dcs: 2,
+    shipments: 2,
+    pending: 1,
+    children: [
+      { id: "indore-dc", dc: "Indore DC", location: "MP", shipments: 1 },
+      { id: "bhopal-dc", dc: "Bhopal DC", location: "MP", shipments: 1 },
+    ],
+  },
+  {
+    id: "kochi",
+    name: "Kochi Plant",
+    location: "Kerala",
+    dcs: 2,
+    shipments: 2,
+    pending: 1,
+    children: [
+      { id: "kochi-dc", dc: "Kochi DC", location: "KL", shipments: 1 },
+      { id: "calicut-dc", dc: "Kozhikode DC", location: "KL", shipments: 1 },
     ],
   },
 ];
@@ -211,6 +385,97 @@ export const mockShipmentDetailsByDc = {
       children: [
         { id: "CLO-150-48", material: "CLO-150-48", materialDescription: "Closeup Red Hot 150g", p: "P1", ordQty: 160, ordCs: 4, ordT: 1.1, recCs: 5, csWeight: 0.275, elig: 3, maxElig: 8, total: "160 / 1.1T", fill: false },
         { id: "PON-50-144", material: "PON-50-144", materialDescription: "Ponds Dreamflower 50g", p: "P2", ordQty: 80, ordCs: 1, ordT: 0.5, recCs: 4, csWeight: 0.125, elig: 1, maxElig: 5, total: "80 / 0.5T", fill: false },
+      ],
+    },
+  ],
+  "mumbai_mumbai-dc": [
+    {
+      id: "IND-24095",
+      shipmentId: "IND-24095",
+      label: "10T · 75.0% → 93.0%",
+      utilFrom: "75.0%",
+      utilTo: "93.0%",
+      weight: "10T",
+      priority: "High",
+      status: "PENDING",
+      children: [
+        { id: "VIM-500-24", material: "VIM-500-24", materialDescription: "Vim Liquid 500ml", p: "P1", ordQty: 300, ordCs: 12, ordT: 3.6, recCs: 3, csWeight: 0.3, elig: 4, maxElig: 7, total: "300 / 3.6T", fill: false },
+        { id: "SRF-500-24", material: "SRF-500-24", materialDescription: "Surf Excel 500g", p: "P2", ordQty: 220, ordCs: 8, ordT: 2.2, recCs: 4, csWeight: 0.25, elig: 6, maxElig: 10, total: "220 / 2.2T", fill: false },
+      ],
+    },
+  ],
+  "mumbai_pune-dc": [
+    {
+      id: "IND-24096",
+      shipmentId: "IND-24096",
+      label: "9T · 70.0% → 86.0%",
+      utilFrom: "70.0%",
+      utilTo: "86.0%",
+      weight: "9T",
+      priority: "Medium",
+      status: "ACCEPTED",
+      children: [
+        { id: "DOV-100-48", material: "DOV-100-48", materialDescription: "Dove Cream Bar 100g", p: "P1", ordQty: 180, ordCs: 5, ordT: 1.2, recCs: 4, csWeight: 0.24, elig: 3, maxElig: 7, total: "180 / 1.2T", fill: false },
+      ],
+    },
+  ],
+  "pune_pune-dc2": [
+    {
+      id: "IND-24097",
+      shipmentId: "IND-24097",
+      label: "8T · 72.0% → 89.0%",
+      utilFrom: "72.0%",
+      utilTo: "89.0%",
+      weight: "8T",
+      priority: "High",
+      status: "PENDING",
+      children: [
+        { id: "RIN-250-48", material: "RIN-250-48", materialDescription: "Rin Bar 250g", p: "P1", ordQty: 240, ordCs: 8, ordT: 2.4, recCs: 3, csWeight: 0.3, elig: 5, maxElig: 8, total: "240 / 2.4T", fill: false },
+      ],
+    },
+  ],
+  "kolkata_kolkata-dc": [
+    {
+      id: "IND-24098",
+      shipmentId: "IND-24098",
+      label: "10T · 74.0% → 92.5%",
+      utilFrom: "74.0%",
+      utilTo: "92.5%",
+      weight: "10T",
+      priority: "High",
+      status: "PENDING",
+      children: [
+        { id: "LIF-125-72", material: "LIF-125-72", materialDescription: "Lifebuoy Total 125g", p: "P1", ordQty: 250, ordCs: 6, ordT: 2.0, recCs: 5, csWeight: 0.3, elig: 4, maxElig: 9, total: "250 / 2.0T", fill: false },
+      ],
+    },
+  ],
+  "chennai_chennai-dc": [
+    {
+      id: "IND-24099",
+      shipmentId: "IND-24099",
+      label: "9T · 69.0% → 88.0%",
+      utilFrom: "69.0%",
+      utilTo: "88.0%",
+      weight: "9T",
+      priority: "High",
+      status: "ACCEPTED",
+      children: [
+        { id: "VIM-500-24", material: "VIM-500-24", materialDescription: "Vim Liquid 500ml", p: "P1", ordQty: 220, ordCs: 7, ordT: 2.2, recCs: 6, csWeight: 0.3, elig: 3, maxElig: 9, total: "220 / 2.2T", fill: false },
+      ],
+    },
+  ],
+  "bengaluru_blr-dc": [
+    {
+      id: "IND-24100",
+      shipmentId: "IND-24100",
+      label: "8T · 73.0% → 91.0%",
+      utilFrom: "73.0%",
+      utilTo: "91.0%",
+      weight: "8T",
+      priority: "Medium",
+      status: "PENDING",
+      children: [
+        { id: "CLO-150-48", material: "CLO-150-48", materialDescription: "Closeup Red Hot 150g", p: "P1", ordQty: 190, ordCs: 5, ordT: 1.5, recCs: 4, csWeight: 0.25, elig: 2, maxElig: 6, total: "190 / 1.5T", fill: false },
       ],
     },
   ],

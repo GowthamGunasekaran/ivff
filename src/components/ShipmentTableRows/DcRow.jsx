@@ -1,8 +1,8 @@
+import { memo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
-import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
 import CircularProgress from "@mui/material/CircularProgress";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
@@ -53,7 +53,7 @@ function DcErrorState({ error, onRetry }) {
   );
 }
 
-export function DcRow({
+export const DcRow = memo(function DcRow({
   plantId,
   dc,
   openDc,
@@ -85,9 +85,9 @@ export function DcRow({
         </TableCell>
       </TableRow>
 
-      <TableRow>
-        <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
-          <Collapse in={openDc} timeout="auto" unmountOnExit>
+      {openDc && (
+        <TableRow>
+          <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
             <Table size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
               <TableBody>
                 {isLoading && <DcLoadingState dcName={dc.dc} />}
@@ -115,11 +115,12 @@ export function DcRow({
                 )}
               </TableBody>
             </Table>
-          </Collapse>
-        </TableCell>
-      </TableRow>
+          </TableCell>
+        </TableRow>
+      )}
     </>
   );
-}
+});
 
 export default DcRow;
+

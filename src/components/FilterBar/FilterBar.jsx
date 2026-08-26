@@ -4,11 +4,8 @@ import Checkbox from "@mui/material/Checkbox";
 import Chip from "@mui/material/Chip";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
-import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import dayjs from "dayjs";
 import { useAppContext } from "../../AppContext";
+import DateRangePicker from "../DateRangePicker/DateRangePicker";
 import styles from "./FilterBar.module.css";
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" sx={{ color: "#8a90a0", fontSize: 16 }} />;
@@ -18,6 +15,7 @@ export default function FilterBar() {
   const {
     filters,
     setFilters,
+    applyFilters,
     filterDefs,
     minDate,
     maxDate,
@@ -29,42 +27,54 @@ export default function FilterBar() {
 
   if (!filterDefs || !filters) return null;
 
-  // Date boundary calculation based on Context API values
-  const parsedMin = minDate ? dayjs(minDate) : undefined;
-  const parsedMax = maxDate ? dayjs(maxDate) : undefined;
+  const startDateVal = filters.startDate || currentStartDate || "";
+  const endDateVal = filters.endDate || currentEndDate || "";
 
-  const startDateVal = filters.startDate
-    ? dayjs(filters.startDate)
-    : currentStartDate
-    ? dayjs(currentStartDate)
-    : null;
+  const handleDropdownChange = (label, newValue, reason) => {
+    const updated = { ...filters, [label]: newValue };
+    setFilters(updated);
+    if (reason === "clear") {
+      applyFilters(updated);
+    }
+  };
 
-  const endDateVal = filters.endDate
-    ? dayjs(filters.endDate)
-    : currentEndDate
-    ? dayjs(currentEndDate)
-    : null;
+  const handleDropdownClose = () => {
+    applyFilters(filters);
+  };
 
-  // Start Date min/max: min is API minDate; max is endDate (if set) or API maxDate
-  const startMinDate = parsedMin;
-  const startMaxDate = endDateVal && endDateVal.isValid() ? endDateVal : parsedMax;
-
-  // End Date min/max: min is startDate (if set) or API minDate; max is API maxDate
-  const endMinDate = startDateVal && startDateVal.isValid() ? startDateVal : parsedMin;
-  const endMaxDate = parsedMax;
+  const handleDateRangeChange = (start, end) => {
+    const updated = { ...filters, startDate: start, endDate: end };
+    if (setCurrentStartDate) {
+      setCurrentStartDate(start);
+    }
+    if (setCurrentEndDate) {
+      setCurrentEndDate(end);
+    }
+    applyFilters(updated);
+  };
 
   const compactInputSx = {
+    width: 175,
+    minWidth: 175,
+    maxWidth: 175,
     "& .MuiOutlinedInput-root": {
       fontSize: 11,
       borderRadius: "8px",
       minHeight: 32,
+      height: 32,
       padding: "2px 6px",
+      backgroundColor: "white",
+      flexWrap: "nowrap",
+      overflow: "hidden",
       "& fieldset": { borderColor: "#d9dce1" },
       "&:hover fieldset": { borderColor: "#b8bcc6" },
       "&.Mui-focused fieldset": { borderColor: "#2c4cd3" },
       "& .MuiInputBase-input": {
-        padding: "2px 4px",
+        padding: "3px 4px",
         fontSize: 11,
+        color: "#1f2430",
+        fontFamily: "inherit",
+        minWidth: 0,
         "&::placeholder": {
           color: "#5a6072",
           opacity: 0.85,
@@ -77,6 +87,8 @@ export default function FilterBar() {
       transform: "translate(10px, 8px) scale(1)",
       "&.MuiInputLabel-shrink": {
         transform: "translate(10px, -6px) scale(0.75)",
+        backgroundColor: "white",
+        padding: "0 4px",
       },
       "&.Mui-focused": { color: "#2c4cd3" },
     },
@@ -101,9 +113,8 @@ export default function FilterBar() {
             size="small"
             options={f.options}
             value={currentVal}
-            onChange={(_, newValue) =>
-              setFilters((v) => ({ ...v, [f.label]: newValue }))
-            }
+            onChange={(_, newValue, reason) => handleDropdownChange(f.label, newValue, reason)}
+            onClose={handleDropdownClose}
             renderOption={(props, option, { selected }) => {
               const { key, ...optionProps } = props;
               return (
@@ -126,36 +137,60 @@ export default function FilterBar() {
                 </li>
               );
             }}
-            renderTags={(tagValue, getTagProps) =>
-              tagValue.map((option, index) => {
-                const { key, ...tagProps } = getTagProps({ index });
-                return (
+            renderTags={(tagValue, getTagProps) => {
+              const numTags = tagValue.length;
+              if (numTags === 0) return null;
+              const firstTag = tagValue[0];
+              const { key, ...firstTagProps } = getTagProps({ index: 0 });
+              return (
+                <div style={{ display: "flex", alignItems: "center", minWidth: 0, overflow: "hidden" }}>
                   <Chip
                     key={key}
-                    label={option}
+                    label={firstTag}
                     size="small"
-                    {...tagProps}
+                    {...firstTagProps}
                     sx={{
                       height: 20,
+                      maxWidth: 85,
                       fontSize: 10,
                       backgroundColor: "#e4ebff",
                       color: "#2c4cd3",
                       borderRadius: "4px",
-                      margin: "1px",
+                      margin: "0 2px 0 0",
+                      "& .MuiChip-label": {
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        padding: "0 4px",
+                      },
                       "& .MuiChip-deleteIcon": {
                         fontSize: 12,
                         color: "#2c4cd3",
+                        margin: "0 2px 0 -4px",
                         "&:hover": { color: "#1a3278" },
                       },
                     }}
                   />
-                );
-              })
-            }
-            sx={{
-              minWidth: 155,
-              ...compactInputSx,
+                  {numTags > 1 && (
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: "#2c4cd3",
+                        backgroundColor: "#eef2ff",
+                        padding: "1px 5px",
+                        borderRadius: "4px",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                      }}
+                    >
+                      +{numTags - 1}
+                    </span>
+                  )}
+                </div>
+              );
             }}
+            sx={compactInputSx}
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -171,56 +206,22 @@ export default function FilterBar() {
         );
       })}
 
-      {/* Date Range Picker (Start Date & End Date) */}
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <DatePicker
-          label="Start Date"
-          value={startDateVal}
-          onChange={(newValue) => {
-            const formatted = newValue && newValue.isValid() ? newValue.format("YYYY-MM-DD") : "";
-            setFilters((v) => ({ ...v, startDate: formatted }));
-            if (setCurrentStartDate) {
-              setCurrentStartDate(formatted);
-            }
-          }}
-          minDate={startMinDate}
-          maxDate={startMaxDate}
-          slotProps={{
-            textField: {
-              size: "small",
-              sx: {
-                minWidth: 135,
-                ...compactInputSx,
-              },
-            },
-          }}
-        />
-        <DatePicker
-          label="End Date"
-          value={endDateVal}
-          onChange={(newValue) => {
-            const formatted = newValue && newValue.isValid() ? newValue.format("YYYY-MM-DD") : "";
-            setFilters((v) => ({ ...v, endDate: formatted }));
-            if (setCurrentEndDate) {
-              setCurrentEndDate(formatted);
-            }
-          }}
-          minDate={endMinDate}
-          maxDate={endMaxDate}
-          slotProps={{
-            textField: {
-              size: "small",
-              sx: {
-                minWidth: 135,
-                ...compactInputSx,
-              },
-            },
-          }}
-        />
-      </LocalizationProvider>
+      {/* Combined Single-Go Date Range Picker */}
+      <DateRangePicker
+        startDate={startDateVal}
+        endDate={endDateVal}
+        minDate={minDate || undefined}
+        maxDate={maxDate || undefined}
+        onChange={handleDateRangeChange}
+      />
 
       <div className={styles.actions}>
-        <button className={styles.iconBtn} aria-label="Refresh">
+        <button
+          className={styles.iconBtn}
+          aria-label="Refresh"
+          onClick={() => applyFilters(filters)}
+          title="Refresh Filter Data"
+        >
           <svg fill="none" height="14" viewBox="0 0 20 20" width="14">
             <path d="M3.5 10a6.5 6.5 0 1 0 1.5-4.15M3.5 5.5v3.5H7" stroke="#5a6072" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" />
           </svg>

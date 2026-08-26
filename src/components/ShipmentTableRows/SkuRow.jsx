@@ -1,3 +1,4 @@
+import { memo, useState, useEffect } from "react";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import CloseIcon from "@mui/icons-material/Close";
@@ -5,7 +6,7 @@ import { PBadge, FillBadge } from "./TableBadges";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
-export function SkuRow({ sku, highlight, onRecChange }) {
+export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   const highlightClass = highlight ? styles.skuRowHighlight : "";
   const cellClass = highlight ? `${styles.skuCell} ${styles.skuCellHighlight}` : styles.skuCell;
 
@@ -14,6 +15,21 @@ export function SkuRow({ sku, highlight, onRecChange }) {
   const skuRecCs = sku.recCs ?? 0;
   const skuCsWeight = sku.csWeight ?? 0;
   const maxPool = sku.maxElig != null ? sku.maxElig : ((sku.recCs || 0) + (sku.elig || 0));
+
+  const [val, setVal] = useState(skuRecCs);
+
+  useEffect(() => {
+    setVal(skuRecCs);
+  }, [skuRecCs]);
+
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    const num = Number(raw);
+    setVal(raw);
+    if (!isNaN(num) && onRecChange) {
+      onRecChange(num);
+    }
+  };
 
   return (
     <TableRow className={`${styles.skuRow} ${highlightClass}`}>
@@ -39,12 +55,12 @@ export function SkuRow({ sku, highlight, onRecChange }) {
             type="number"
             min={0}
             max={maxPool}
-            value={skuRecCs}
-            onChange={(e) => onRecChange && onRecChange(Number(e.target.value))}
+            value={val}
+            onChange={handleChange}
             className={styles.skuInputRecQty}
             title={`Max eligible: ${maxPool}`}
           />
-          <span className={styles.skuRecQtySub}>cs / {(skuRecCs * skuCsWeight).toFixed(2)}T</span>
+          <span className={styles.skuRecQtySub}>cs / {(Number(val || 0) * skuCsWeight).toFixed(2)}T</span>
         </div>
       </TableCell>
       <TableCell className={`${cellClass} ${sku.elig > 0 ? styles.skuElig : styles.skuEligEmpty}`} sx={{ width: COL.elig }}>
@@ -59,6 +75,7 @@ export function SkuRow({ sku, highlight, onRecChange }) {
       </TableCell>
     </TableRow>
   );
-}
+});
 
 export default SkuRow;
+

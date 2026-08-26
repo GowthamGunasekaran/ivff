@@ -30,7 +30,27 @@ export const fetchPlantHierarchy = async (filters = {}) => {
     return result.data || result;
   } catch (error) {
     console.warn("Error fetching plant hierarchy (API 1), falling back to mock data:", error);
-    return initPlantHierarchy;
+    let plants = [...initPlantHierarchy];
+    if (payload.sendingPlant && payload.sendingPlant.length > 0) {
+      plants = plants.filter((p) =>
+        payload.sendingPlant.some((sp) =>
+          p.name.toLowerCase().includes(sp.toLowerCase()) || sp.toLowerCase().includes(p.name.toLowerCase())
+        )
+      );
+    }
+    if (payload.receivingPlant && payload.receivingPlant.length > 0) {
+      plants = plants
+        .map((p) => {
+          const matchingDcs = (p.children || []).filter((dc) =>
+            payload.receivingPlant.some((rp) =>
+              dc.dc.toLowerCase().includes(rp.toLowerCase()) || rp.toLowerCase().includes(dc.dc.toLowerCase())
+            )
+          );
+          return matchingDcs.length > 0 ? { ...p, children: matchingDcs, dcs: matchingDcs.length } : null;
+        })
+        .filter(Boolean);
+    }
+    return plants;
   }
 };
 
@@ -99,3 +119,115 @@ export const updateShipmentPlan = async (payload = {}) => {
 
 // Backward-compatible alias for existing imports if any
 export const fetchShipments = fetchPlantHierarchy;
+
+/**
+ * Mock material catalog stock lookup for search computation fallback
+ */
+const factoryStockLookup = {
+  "VIM-500-24": { desc: "Vim Liquid 500ml", factoryStock: 12000 },
+  "LIF-125-72": { desc: "Lifebuoy Total 125g", factoryStock: 15000 },
+  "CLO-150-48": { desc: "Closeup Red Hot 150g", factoryStock: 10000 },
+  "PON-50-144": { desc: "Ponds Dreamflower 50g", factoryStock: 8500 },
+  "DOV-100-48": { desc: "Dove Cream Bar 100g", factoryStock: 9200 },
+  "SRF-500-24": { desc: "Surf Excel 500g", factoryStock: 25000 },
+  "RIN-250-48": { desc: "Rin Bar 250g", factoryStock: 18000 },
+};
+
+/**
+ * Computes mock search aggregate results across all shipment details
+ */
+export const computeMockSearchResults = (term) => {
+  const termLower = (term || "").toLowerCase().trim();
+  if (!termLower || termLower.length < 3) {
+    return { term: term || "", results: [], totalShipments: 0, totalDcs: 0 };
+  }
+
+  const materialMap = {};
+  let totalMatchingShipments = 0;
+  const matchingDcs = new Set();
+
+  Object.entries(mockShipmentDetailsByDc).forEach(([dcKey, shipments]) => {
+    shipments.forEach((ind) => {
+      let shipmentMatched = false;
+      const skus = ind.children || ind.skus || [];
+      skus.forEach((sku) => {
+        const id = sku.id || sku.material || "";
+        const desc = sku.desc || sku.materialDescription || "";
+        if (id.toLowerCase().includes(termLower) || desc.toLowerCase().includes(termLower)) {
+          shipmentMatched = true;
+          matchingDcs.add(dcKey);
+
+          if (!materialMap[id]) {
+            const stockInfo = factoryStockLookup[id] || { desc: desc || id, factoryStock: 10000 };
+            materialMap[id] = {
+              material: id,
+              materialDescription: desc || stockInfo.desc,
+              allocated: 0,
+              available: stockInfo.factoryStock,
+              shipmentsCount: 0,
+              dcsCount: new Set(),
+            };
+          }
+          const alloc = (sku.ordQty || 0) + (sku.recCs || 0);
+          materialMap[id].allocated += alloc || (sku.recCs || 0) || 100;
+          materialMap[id].shipmentsCount += 1;
+          materialMap[id].dcsCount.add(dcKey);
+        }
+      });
+      if (shipmentMatched) {
+        totalMatchingShipments++;
+      }
+    });
+  });
+
+  const results = Object.values(materialMap).map((m) => ({
+    material: m.material,
+    materialDescription: m.materialDescription,
+    allocated: m.allocated,
+    available: m.available,
+    remaining: Math.max(0, m.available - m.allocated),
+    shipmentsCount: m.shipmentsCount,
+    dcsCount: m.dcsCount.size,
+  }));
+
+  return {
+    term,
+    results,
+    totalShipments: totalMatchingShipments,
+    totalDcs: matchingDcs.size,
+  };
+};
+
+/**
+ * API 4: Search Shipments / Materials with Debouncing
+ * Called when search term is >= 3 characters
+ * Parameters: term, CBU, class, fromDate, toDate
+ */
+export const searchShipmentsApi = async (searchTerm, params = {}) => {
+  const payload = {
+    term: searchTerm,
+    CBU: params.CBU || [],
+    class: params.class || "All",
+    fromDate: params.fromDate || params.startDate || "",
+    toDate: params.toDate || params.endDate || "",
+  };
+
+  try {
+    const response = await fetch("/api/v1/shipments/search", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const result = await response.json();
+    return result.data || result;
+  } catch (error) {
+    console.warn("Error searching shipments via API, falling back to mock search computation:", error);
+    return computeMockSearchResults(searchTerm);
+  }
+};
+
