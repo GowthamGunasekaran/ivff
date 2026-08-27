@@ -1,0 +1,63 @@
+# User Access Management
+
+## 1. Summary
+
+The application will use **Microsoft SSO** along with **AD group-based access control**.
+
+Three AD groups will be created and mapped to the application:
+
+* **CSP** – Admin access with full application privileges.
+* **CPD** – Limited admin access.
+* **User** – Standard application access.
+
+Users will be added to the appropriate AD group based on their required access. The application will identify the user's group through the SSO authentication token and apply the corresponding permissions.
+
+## 2. Access Groups
+
+| AD Group | Application Role | Access Level                  |
+| -------- | ---------------- | ----------------------------- |
+| **CSP**  | CSP Admin        | Full administrative access    |
+| **CPD**  | CPD Admin        | Limited administrative access |
+| **User** | Standard User    | View-only access              |
+
+### Access Scope
+
+#### CSP
+
+CSP users will have full application access, including:
+
+* View all One-Pager reports.
+* Create and manage **National One-Pager**.
+* Create and manage **Retail One-Pager**.
+
+#### CPD
+
+CPD users will have limited administrative access, including:
+
+* View all One-Pager reports.
+* Create and manage **Retail One-Pager**.
+
+#### User
+
+Standard users will have view-only access to:
+
+* View **published One-Pager reports**.
+* View **archived One-Pager reports**.
+* Draft content will not be visible.
+* Content creation and modification will not be available to standard users.
+
+## 3. User Access Change / Removal
+
+User access will be managed through AD group membership.
+
+* Add the user to the appropriate AD group to provide access.
+* Move the user to another AD group when their access level changes.
+* Remove the user from the relevant AD group when application access is no longer required.
+
+The application will apply the corresponding permissions based on the user's current AD group.
+
+## 4. Security Principle
+
+Access will follow a **group-based Role-Based Access Control (RBAC)** model. Application permissions will be assigned to predefined AD groups rather than directly to individual users.
+
+This provides centralized and consistent access management through **Microsoft SSO and AD group membership**.
