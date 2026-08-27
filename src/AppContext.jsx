@@ -250,38 +250,31 @@ export const AppProvider = ({ children }) => {
     }
   }, [showToast]);
 
-  // Search Debouncing & API Call: Wait 2 seconds after last keystroke before querying
-  useEffect(() => {
-    const query = shipmentSearch.trim();
-
-    if (!query || query.length < 3) {
-      setDebouncedSearchTerm("");
+  // Immediate Search Trigger for CBU Dropdown Selection
+  const triggerCbuSearch = useCallback(async (cbuCode) => {
+    const term = (cbuCode || "").trim();
+    setShipmentSearch(term);
+    setDebouncedSearchTerm(term);
+    if (!term) {
       setSearchResultsData(null);
       setIsSearchLoading(false);
       return;
     }
-
     setIsSearchLoading(true);
-
-    const timer = setTimeout(async () => {
-      setDebouncedSearchTerm(query);
-      try {
-        const results = await searchShipmentsApi(query, {
-          CBU: filters?.CBU || [],
-          class: filters?.class || "All",
-          fromDate: filters?.startDate || "",
-          toDate: filters?.endDate || "",
-        });
-        setSearchResultsData(results);
-      } catch (err) {
-        console.error("Search API error:", err);
-      } finally {
-        setIsSearchLoading(false);
-      }
-    }, 2000); // 2-second debounce
-
-    return () => clearTimeout(timer);
-  }, [shipmentSearch, filters]);
+    try {
+      const results = await searchShipmentsApi(term, {
+        CBU: filters?.CBU || [],
+        class: filters?.class || "All",
+        fromDate: filters?.startDate || "",
+        toDate: filters?.endDate || "",
+      });
+      setSearchResultsData(results);
+    } catch (err) {
+      console.error("Search API error:", err);
+    } finally {
+      setIsSearchLoading(false);
+    }
+  }, [filters]);
 
   // Search filter logic for Shipment Workspace: expand matching nodes
   const searchTerm = debouncedSearchTerm;
@@ -461,6 +454,7 @@ export const AppProvider = ({ children }) => {
     dcErrorState,
     shipmentSearch,
     setShipmentSearch,
+    triggerCbuSearch,
     debouncedSearchTerm,
     isSearchLoading,
     searchResultsData,
@@ -500,6 +494,7 @@ export const AppProvider = ({ children }) => {
     dcLoadingState,
     dcErrorState,
     shipmentSearch,
+    triggerCbuSearch,
     debouncedSearchTerm,
     isSearchLoading,
     searchResultsData,

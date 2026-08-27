@@ -5,6 +5,9 @@ import TableCell from "@mui/material/TableCell";
 import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import CircularProgress from "@mui/material/CircularProgress";
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useAppContext } from "../../AppContext";
 import ReviewDialog from "../ReviewDialog/ReviewDialog";
@@ -13,6 +16,16 @@ import { PlantRow } from "../ShipmentTableRows/ShipmentTableRows";
 import { HEADERS, COL } from "../../utils/constants";
 import styles from "./ShipmentPlanningWorkspace.module.css";
 
+const cbuDescriptions = {
+  "VIM-500-24": "Vim Liquid 500ml",
+  "LIF-125-72": "Lifebuoy Total 125g",
+  "CLO-150-48": "Closeup Red Hot 150g",
+  "PON-50-144": "Ponds Dreamflower 50g",
+  "DOV-100-48": "Dove Cream Bar 100g",
+  "SRF-500-24": "Surf Excel 500g",
+  "RIN-250-48": "Rin Bar 250g",
+};
+
 export default function ShipmentPlanningWorkspace() {
   const {
     plantsData: plants,
@@ -20,8 +33,10 @@ export default function ShipmentPlanningWorkspace() {
     dcLoadingState,
     dcErrorState,
     retryFetchDc,
+    filterDefs,
     shipmentSearch,
     setShipmentSearch,
+    triggerCbuSearch,
     debouncedSearchTerm,
     isSearchLoading,
     searchResultsData,
@@ -42,6 +57,14 @@ export default function ShipmentPlanningWorkspace() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
 
+  const cbuOptions = useMemo(() => {
+    const def = filterDefs?.find((f) => f.label === "CBU");
+    if (def && Array.isArray(def.options) && def.options.length > 0) {
+      return def.options;
+    }
+    return Object.keys(cbuDescriptions);
+  }, [filterDefs]);
+
   const totalPlants = plants.length;
   const totalPages = Math.max(1, Math.ceil(totalPlants / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -53,7 +76,7 @@ export default function ShipmentPlanningWorkspace() {
     return plants.slice(startIndex, endIndex);
   }, [plants, startIndex, endIndex]);
 
-  const isSearching = isSearchLoading || shipmentSearch.trim().length >= 3;
+  const isSearching = isSearchLoading || Boolean(shipmentSearch && shipmentSearch.trim().length >= 3);
 
   return (
     <div className={styles.workspaceContainer}>
@@ -64,28 +87,96 @@ export default function ShipmentPlanningWorkspace() {
           <span className={styles.plantBadge}>ALL PLANTS</span>
         </div>
 
-        {/* Search Bar at the same level on the right */}
-        <div className={styles.searchContainer}>
-          <SearchIcon className={styles.searchIcon} />
-          <input
-            type="text"
-            placeholder="Search CBU Code, CBU Description..."
-            value={shipmentSearch}
-            onChange={(e) => setShipmentSearch(e.target.value)}
-            className={styles.searchInput}
+        {/* Search by CBU Code Dropdown on the right */}
+        <div className={styles.searchDropdownWrapper}>
+          <Autocomplete
+            size="small"
+            options={cbuOptions}
+            value={shipmentSearch || null}
+            onChange={(_, newValue) => {
+              if (triggerCbuSearch) {
+                triggerCbuSearch(newValue || "");
+              } else {
+                setShipmentSearch(newValue || "");
+              }
+            }}
+            renderOption={(props, option) => {
+              const { key, ...optionProps } = props;
+              const desc = cbuDescriptions[option] || "";
+              return (
+                <li
+                  key={key}
+                  {...optionProps}
+                  style={{
+                    fontSize: 11,
+                    padding: "6px 12px",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <span style={{ fontWeight: 700, color: "#1f2430" }}>{option}</span>
+                  {desc && (
+                    <span style={{ fontSize: 10, color: "#5a6072", marginLeft: 8 }}>
+                      {desc}
+                    </span>
+                  )}
+                </li>
+              );
+            }}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                placeholder="Search by CBU Code"
+                size="small"
+                slotProps={{
+                  input: {
+                    ...params.InputProps,
+                    startAdornment: (
+                      <InputAdornment position="start" sx={{ mr: 0.5, ml: 0.25 }}>
+                        <SearchIcon sx={{ fontSize: 16, color: "#5a6072" }} />
+                      </InputAdornment>
+                    ),
+                    endAdornment: (
+                      <>
+                        {isSearchLoading ? (
+                          <CircularProgress size={14} sx={{ color: "#2c4cd3", mr: 0.5 }} />
+                        ) : null}
+                        {params.InputProps.endAdornment}
+                      </>
+                    ),
+                  },
+                }}
+                sx={{
+                  "& .MuiOutlinedInput-root": {
+                    fontSize: 11,
+                    borderRadius: "8px",
+                    minHeight: 32,
+                    height: 32,
+                    padding: "2px 6px !important",
+                    backgroundColor: "white",
+                    "& fieldset": { borderColor: "#d9dce1" },
+                    "&:hover fieldset": { borderColor: "#b8bcc6" },
+                    "&.Mui-focused fieldset": { borderColor: "#2c4cd3" },
+                    "& .MuiInputBase-input": {
+                      padding: "3px 4px !important",
+                      fontSize: 11,
+                      color: "#1f2430",
+                      fontFamily: "inherit",
+                      "&::placeholder": {
+                        color: "#5a6072",
+                        opacity: 0.9,
+                      },
+                    },
+                  },
+                }}
+              />
+            )}
+            sx={{
+              width: 260,
+              minWidth: 220,
+            }}
           />
-          {isSearchLoading ? (
-            <CircularProgress size={14} className={styles.searchSpinner} />
-          ) : shipmentSearch ? (
-            <button
-              type="button"
-              onClick={() => setShipmentSearch("")}
-              className={styles.clearBtn}
-              title="Clear search"
-            >
-              ✕
-            </button>
-          ) : null}
         </div>
       </div>
 
