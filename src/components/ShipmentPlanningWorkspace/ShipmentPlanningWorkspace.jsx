@@ -16,15 +16,15 @@ import { PlantRow } from "../ShipmentTableRows/ShipmentTableRows";
 import { HEADERS, COL } from "../../utils/constants";
 import styles from "./ShipmentPlanningWorkspace.module.css";
 
-const cbuDescriptions = {
-  "VIM-500-24": "Vim Liquid 500ml",
-  "LIF-125-72": "Lifebuoy Total 125g",
-  "CLO-150-48": "Closeup Red Hot 150g",
-  "PON-50-144": "Ponds Dreamflower 50g",
-  "DOV-100-48": "Dove Cream Bar 100g",
-  "SRF-500-24": "Surf Excel 500g",
-  "RIN-250-48": "Rin Bar 250g",
-};
+const DEFAULT_CBUS = [
+  "VIM-500-24",
+  "LIF-125-72",
+  "CLO-150-48",
+  "PON-50-144",
+  "DOV-100-48",
+  "SRF-500-24",
+  "RIN-250-48",
+];
 
 export default function ShipmentPlanningWorkspace() {
   const {
@@ -62,7 +62,7 @@ export default function ShipmentPlanningWorkspace() {
     if (def && Array.isArray(def.options) && def.options.length > 0) {
       return def.options;
     }
-    return Object.keys(cbuDescriptions);
+    return DEFAULT_CBUS;
   }, [filterDefs]);
 
   const totalPlants = plants.length;
@@ -102,7 +102,6 @@ export default function ShipmentPlanningWorkspace() {
             }}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
-              const desc = cbuDescriptions[option] || "";
               return (
                 <li
                   key={key}
@@ -110,17 +109,11 @@ export default function ShipmentPlanningWorkspace() {
                   style={{
                     fontSize: 11,
                     padding: "6px 12px",
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    fontWeight: 600,
+                    color: "#1f2430",
                   }}
                 >
-                  <span style={{ fontWeight: 700, color: "#1f2430" }}>{option}</span>
-                  {desc && (
-                    <span style={{ fontSize: 10, color: "#5a6072", marginLeft: 8 }}>
-                      {desc}
-                    </span>
-                  )}
+                  {option}
                 </li>
               );
             }}

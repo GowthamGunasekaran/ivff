@@ -31,6 +31,12 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
     }
   };
 
+  const numVal = isNaN(Number(val)) ? 0 : Number(val);
+  const totalQty = (sku.ordQty != null ? sku.ordQty : 0) + numVal;
+  const totalTNum = (sku.ordT != null ? sku.ordT : 0) + numVal * skuCsWeight;
+  const totalT = totalTNum.toFixed(2);
+  const totalDisplay = sku.ordQty != null || numVal > 0 ? `${totalQty} / ${totalT}T` : "—";
+
   return (
     <TableRow className={`${styles.skuRow} ${highlightClass}`}>
       <TableCell className={cellClass} sx={{ width: COL.expand }} />
@@ -67,7 +73,7 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
         {sku.elig ?? "—"}
       </TableCell>
       <TableCell className={cellClass} sx={{ width: COL.total }}>
-        <span className={styles.skuTotal}>{sku.total || "—"}</span>
+        <span className={styles.skuTotal}>{totalDisplay}</span>
       </TableCell>
       <TableCell className={cellClass} sx={{ width: COL.status }} />
       <TableCell className={cellClass} sx={{ width: COL.actions, textAlign: "center" }}>

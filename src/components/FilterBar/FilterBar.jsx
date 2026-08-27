@@ -5,7 +5,7 @@ import Chip from "@mui/material/Chip";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import { useAppContext } from "../../AppContext";
-import DateRangePicker from "../DateRangePicker/DateRangePicker";
+import DatePicker from "../DatePicker/DatePicker";
 import styles from "./FilterBar.module.css";
 
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" sx={{ color: "#8a90a0", fontSize: 16 }} />;
@@ -19,6 +19,7 @@ export default function FilterBar() {
     filterDefs,
     minDate,
     maxDate,
+    defaultDate,
     currentStartDate,
     setCurrentStartDate,
     currentEndDate,
@@ -27,8 +28,7 @@ export default function FilterBar() {
 
   if (!filterDefs || !filters) return null;
 
-  const startDateVal = filters.startDate || currentStartDate || "";
-  const endDateVal = filters.endDate || currentEndDate || "";
+  const selectedDateVal = filters.date || filters.startDate || currentStartDate || defaultDate || "2026-08-01";
 
   const handleDropdownChange = (label, newValue, reason) => {
     const updated = { ...filters, [label]: newValue };
@@ -42,13 +42,18 @@ export default function FilterBar() {
     applyFilters(filters);
   };
 
-  const handleDateRangeChange = (start, end) => {
-    const updated = { ...filters, startDate: start, endDate: end };
+  const handleDateChange = (newDate) => {
+    const updated = {
+      ...filters,
+      date: newDate,
+      startDate: newDate,
+      endDate: newDate,
+    };
     if (setCurrentStartDate) {
-      setCurrentStartDate(start);
+      setCurrentStartDate(newDate);
     }
     if (setCurrentEndDate) {
-      setCurrentEndDate(end);
+      setCurrentEndDate(newDate);
     }
     applyFilters(updated);
   };
@@ -206,13 +211,13 @@ export default function FilterBar() {
         );
       })}
 
-      {/* Combined Single-Go Date Range Picker */}
-      <DateRangePicker
-        startDate={startDateVal}
-        endDate={endDateVal}
+      {/* Single Date Picker */}
+      <DatePicker
+        date={selectedDateVal}
+        defaultDate={defaultDate || "2026-08-01"}
         minDate={minDate || undefined}
         maxDate={maxDate || undefined}
-        onChange={handleDateRangeChange}
+        onChange={handleDateChange}
       />
 
       <div className={styles.actions}>

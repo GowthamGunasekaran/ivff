@@ -1,15 +1,27 @@
+const getTodayDateString = () => {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const currentDate = getTodayDateString();
+export const defaultDate = currentDate;
+export const minDate = "2026-01-01";
+export const maxDate = "2026-12-31";
+
 export const initFilters = {
   "Source Plan": [],
   DC: [],
   CBU: [],
-  startDate: "2026-08-01",
-  endDate: "2026-08-25",
+  date: currentDate,
+  startDate: currentDate,
+  endDate: currentDate,
 };
 
-export const minDate = "2026-08-01";
-export const maxDate = "2026-08-31";
-export const currentStartDate = "2026-08-01";
-export const currentEndDate = "2026-08-25";
+export const currentStartDate = currentDate;
+export const currentEndDate = currentDate;
 
 export const kpiData = {
   utilisation: [

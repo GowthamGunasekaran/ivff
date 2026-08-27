@@ -20,6 +20,7 @@ export const AppProvider = ({ children }) => {
   const [filterDefs, setFilterDefs] = useState(null);
   const [minDate, setMinDate] = useState(null);
   const [maxDate, setMaxDate] = useState(null);
+  const [selectedDate, setSelectedDate] = useState("2026-08-01");
   const [currentStartDate, setCurrentStartDate] = useState(null);
   const [currentEndDate, setCurrentEndDate] = useState(null);
 
@@ -174,11 +175,14 @@ export const AppProvider = ({ children }) => {
 
       const updatedSkus = skuList.map((s, i) => {
         if (i !== skuIdx) return s;
+        const totalQty = (s.ordQty != null ? s.ordQty : 0) + clampedVal;
+        const totalT = ((s.ordT != null ? s.ordT : 0) + clampedVal * (s.csWeight || 0)).toFixed(2);
         return {
           ...s,
           maxElig: maxPool,
           recCs: clampedVal,
           elig: newElig,
+          total: `${totalQty} / ${totalT}T`,
         };
       });
 
@@ -384,6 +388,7 @@ export const AppProvider = ({ children }) => {
         setFilterDefs(filtersRes.filterDefs);
         setMinDate(filtersRes.minDate || null);
         setMaxDate(filtersRes.maxDate || null);
+        setSelectedDate(filtersRes.date || filtersRes.currentStartDate || "2026-08-01");
         setCurrentStartDate(filtersRes.currentStartDate || filtersRes.initFilters?.startDate || null);
         setCurrentEndDate(filtersRes.currentEndDate || filtersRes.initFilters?.endDate || null);
         setKpiData(kpiRes);
@@ -429,6 +434,10 @@ export const AppProvider = ({ children }) => {
     filterDefs,
     minDate,
     maxDate,
+    date: selectedDate,
+    setSelectedDate,
+    defaultDate: "2026-08-01",
+    currentDate: "2026-08-01",
     currentStartDate,
     setCurrentStartDate,
     currentEndDate,
@@ -482,6 +491,7 @@ export const AppProvider = ({ children }) => {
     filterDefs,
     minDate,
     maxDate,
+    selectedDate,
     currentStartDate,
     currentEndDate,
     activeTab,

@@ -65,8 +65,9 @@ export const computeCascadingFilters = (payload = {}) => {
     initFilters,
     minDate,
     maxDate,
-    currentStartDate: payload.startDate || currentStartDate,
-    currentEndDate: payload.endDate || currentEndDate,
+    date: payload.date || payload.startDate || "2026-08-01",
+    currentStartDate: payload.date || payload.startDate || currentStartDate,
+    currentEndDate: payload.date || payload.endDate || currentEndDate,
   };
 };
 
