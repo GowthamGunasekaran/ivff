@@ -188,6 +188,12 @@
     color: #8a90a0;
 }
 
+.indDescContent {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+}
+
 .indUtil {
     color: #5a6072;
 }
@@ -195,6 +201,32 @@
 .indUtilTarget {
     font-weight: 700;
     color: #2e9e5b;
+}
+
+.indUtilOver {
+    font-weight: 700;
+    color: #ef4b5c;
+    background: #ffe8ea;
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+
+.indInfoIconWrapper {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 4px;
+    cursor: pointer;
+}
+
+.indInfoIcon {
+    font-size: 15px !important;
+    color: #ef4b5c !important;
+    transition: transform 0.15s ease;
+}
+
+.indInfoIcon:hover {
+    transform: scale(1.15);
 }
 
 .indPriority {
@@ -231,6 +263,12 @@
     color: #2e9e5b;
 }
 
+.indRecQtyOver {
+    font-weight: 700;
+    font-size: 11px;
+    color: #ef4b5c;
+}
+
 .indRecQtySub {
     font-size: 10px;
     color: #8a90a0;
@@ -245,6 +283,23 @@
     border-radius: 6px;
     padding: 4px 14px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.indBtnReview:hover:not(:disabled) {
+    background: #1e3a8a;
+}
+
+.indBtnReviewDisabled {
+    background: #d9dce1 !important;
+    color: #8a90a0 !important;
+    cursor: not-allowed !important;
+    opacity: 0.65;
+    box-shadow: none !important;
+}
+
+.indRowOverUtilized td {
+    background-color: #fff9f9 !important;
 }
 
 /* Dc Row */

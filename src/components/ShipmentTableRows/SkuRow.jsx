@@ -13,8 +13,10 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   const skuId = sku.id || sku.material || "";
   const skuDesc = sku.desc || sku.materialDescription || "";
   const skuRecCs = sku.recCs ?? 0;
-  const skuCsWeight = sku.csWeight ?? 0;
+  const skuCsWeight = sku.csWeight ?? (sku.grossWeight ? sku.grossWeight / 1000 : 0.05);
   const maxPool = sku.maxElig != null ? sku.maxElig : ((sku.recCs || 0) + (sku.elig || 0));
+  const ordCsVal = sku.ordCs != null ? sku.ordCs : sku.cs;
+  const priorityVal = sku.p || sku.risk_flag || "P3";
 
   const [val, setVal] = useState(skuRecCs);
 
@@ -49,10 +51,10 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
       <TableCell className={cellClass} sx={{ width: COL.desc }}>
         <span className={styles.skuDesc}>{skuDesc}</span>
       </TableCell>
-      <TableCell className={cellClass} sx={{ width: COL.priority }}><PBadge p={sku.p || "P3"} /></TableCell>
+      <TableCell className={cellClass} sx={{ width: COL.priority }}><PBadge p={priorityVal} /></TableCell>
       <TableCell className={cellClass} sx={{ width: COL.ordQty }}>
         {sku.ordQty != null ? (
-          <span className={styles.skuOrdQty}>{sku.ordQty}<span className={styles.skuOrdQtySub}>/ {sku.ordCs}cs /{sku.ordT}T</span></span>
+          <span className={styles.skuOrdQty}>{sku.ordQty}<span className={styles.skuOrdQtySub}>/ {ordCsVal}cs /{sku.ordT || (sku.weight != null ? `${sku.weight}kg` : "3.8T")}</span></span>
         ) : <span className={styles.skuTextEmpty}>—</span>}
       </TableCell>
       <TableCell className={cellClass} sx={{ width: COL.recQty }}>
@@ -70,7 +72,7 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
         </div>
       </TableCell>
       <TableCell className={`${cellClass} ${sku.elig > 0 ? styles.skuElig : styles.skuEligEmpty}`} sx={{ width: COL.elig }}>
-        {sku.elig ?? "—"}
+        {typeof sku.elig === "number" ? sku.elig.toLocaleString() : (sku.elig ?? "—")}
       </TableCell>
       <TableCell className={cellClass} sx={{ width: COL.total }}>
         <span className={styles.skuTotal}>{totalDisplay}</span>

@@ -124,6 +124,11 @@ export const fetchShipments = fetchPlantHierarchy;
  * Mock material catalog stock lookup for search computation fallback
  */
 const factoryStockLookup = {
+  "DACM1R4": { desc: "DMX TLT CLNR LIME FRESH 475ML", factoryStock: 150000 },
+  "DDCC1R2": { desc: "DOMEX DISINFECTANT FLOOR CLEANER 500ML", factoryStock: 160000 },
+  "DTBD1R1": { desc: "DMX DIST TLT CLNR UPRO 5 LTR", factoryStock: 140000 },
+  "DXOC1R9": { desc: "DMX TLT CLNR SPARKLING FRESH 475ML", factoryStock: 155000 },
+  "UPDA100": { desc: "Domex UPro Multi Surface Cleaner 5LTR", factoryStock: 135000 },
   "VIM-500-24": { desc: "Vim Liquid 500ml", factoryStock: 12000 },
   "LIF-125-72": { desc: "Lifebuoy Total 125g", factoryStock: 15000 },
   "CLO-150-48": { desc: "Closeup Red Hot 150g", factoryStock: 10000 },

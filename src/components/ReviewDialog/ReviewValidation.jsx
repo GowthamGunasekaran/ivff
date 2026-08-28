@@ -3,11 +3,11 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import styles from "./ReviewDialog.module.css";
 
 export default function ReviewValidation({ ind, metrics, totalCases }) {
-  const capacityT = parseFloat(ind.weight) || 10;
-  const currentUtil = parseFloat(ind.utilFrom) || 73.7;
+  const capacityT = parseFloat(ind.truckCapacity || ind.weight) || 14;
+  const currentUtil = parseFloat(ind.initialUtil || ind.utilFrom) || 95.0;
   const finalUtil = parseFloat(ind.utilTo) || metrics.finalUtil;
   const utilGainVal = Math.max(0, finalUtil - currentUtil);
-  const isHighRisk = finalUtil >= 90;
+  const isHighRisk = finalUtil >= 98;
 
   const validationItems = [
     { label: "Truck Capacity", detail: `${finalUtil.toFixed(1)}% / 100%`, ok: finalUtil <= 100 },
@@ -20,21 +20,23 @@ export default function ReviewValidation({ ind, metrics, totalCases }) {
 
   return (
     <div className={styles.validationContainer}>
-      <div className={styles.validationTitle}>
+      <div className={styles.sectionTitle}>
         VALIDATION
       </div>
-      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
-        {validationItems.map((v) => (
-          <div key={v.label} className={styles.validationRow}>
+      <div className={styles.validationCard}>
+        {validationItems.map((v, i) => (
+          <div key={v.label} className={`${styles.validationRow} ${i === validationItems.length - 1 ? styles.validationRowLast : ""}`}>
             <div>
               <div className={styles.validationLabel}>{v.label}</div>
               <div className={styles.validationDetail}>{v.detail}</div>
             </div>
-            {v.ok ? (
-              <CheckCircleOutlineIcon sx={{ fontSize: 18, color: "#22c55e" }} />
-            ) : (
-              <WarningAmberIcon sx={{ fontSize: 18, color: "#f59e0b" }} />
-            )}
+            <div className={styles.validationIconWrapper}>
+              {v.ok ? (
+                <CheckCircleOutlineIcon className={styles.iconOk} />
+              ) : (
+                <WarningAmberIcon className={styles.iconWarn} />
+              )}
+            </div>
           </div>
         ))}
       </div>

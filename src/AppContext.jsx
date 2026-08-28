@@ -187,24 +187,29 @@ export const AppProvider = ({ children }) => {
       });
 
       // Recalculate shipment-level utilization
-      const capacityT = parseFloat(currentInd.weight) || 10;
-      const baseUtilNum = parseFloat(currentInd.utilFrom) || 73.7;
-      const baseWeightT = (baseUtilNum / 100) * capacityT;
+      const capacityT = parseFloat(currentInd.truckCapacity || currentInd.weight) || 14;
+      const baseUtilNum = parseFloat(currentInd.baseFinalUtil || currentInd.final_utilization || currentInd.utilFrom) || 92.36;
+      const loadCap = currentInd.loadabilityCap != null ? parseFloat(currentInd.loadabilityCap) : 99.0;
+      
       const addedWeightT = updatedSkus.reduce(
-        (sum, s) => sum + (s.recCs || 0) * (s.csWeight || 0.2),
+        (sum, s) => sum + (s.recCs || 0) * (s.csWeight || 0.05),
         0
       );
-      const finalWeightT = baseWeightT + addedWeightT;
-      const finalUtilNum = Math.min(
-        100,
-        Math.round((finalWeightT / capacityT) * 1000) / 10
-      );
+      const addedUtilPercent = (addedWeightT / capacityT) * 100;
+      const finalUtilNum = parseFloat((baseUtilNum + addedUtilPercent).toFixed(1));
+      const isOverUtilized = finalUtilNum > 100;
+      const remainingCap = parseFloat((loadCap - finalUtilNum).toFixed(1));
+
       const newUtilTo = `${finalUtilNum.toFixed(1)}%`;
-      const newLabel = `${currentInd.weight} · ${currentInd.utilFrom} → ${newUtilTo}`;
+      const newLabel = `${currentInd.weight || `${capacityT}T`} · ${currentInd.utilFrom} → ${newUtilTo}`;
 
       const updatedInd = {
         ...currentInd,
         utilTo: newUtilTo,
+        finalUtilNum,
+        isOverUtilized,
+        remainingCap,
+        addedWeightT,
         label: newLabel,
         [skusKey]: updatedSkus,
       };

@@ -17,6 +17,11 @@ import { HEADERS, COL } from "../../utils/constants";
 import styles from "./ShipmentPlanningWorkspace.module.css";
 
 const DEFAULT_CBUS = [
+  "DACM1R4",
+  "DDCC1R2",
+  "DTBD1R1",
+  "DXOC1R9",
+  "UPDA100",
   "VIM-500-24",
   "LIF-125-72",
   "CLO-150-48",

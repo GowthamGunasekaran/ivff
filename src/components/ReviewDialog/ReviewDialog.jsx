@@ -12,7 +12,7 @@ import styles from "./ReviewDialog.module.css";
  * Optimistic Manifest & Metric Calculation
  * Computes manifest table rows, totals, and shipment weights in a single pass
  */
-export function computeManifest(skus) {
+function computeManifest(skus) {
   let totalFinal = 0;
   let totalWeight = 0;
   let totalTonnage = 0;
@@ -21,17 +21,18 @@ export function computeManifest(skus) {
   const rows = (skus || []).map((sku) => {
     const isAi = !!sku.fill;
     const name = sku.desc || sku.materialDescription || sku.id;
-    const source = sku.source || (isAi ? "FACTORY" : "FACTORY");
-    const origCs = sku.ordCs != null ? sku.ordCs : null;
+    const source = sku.source || "FACTORY";
+    const origCs = sku.ordCs != null ? sku.ordCs : sku.cs;
     const recCs = sku.recCs != null ? sku.recCs : null;
     const finalCs = (origCs || 0) + (recCs || 0);
-    const weightKg = Math.round(finalCs * (sku.csWeight || 0.288) * 1000);
-    const tonnage = parseFloat((finalCs * (sku.csWeight || 0.288)).toFixed(2));
+    const csWeight = sku.csWeight ?? (sku.grossWeight ? sku.grossWeight / 1000 : 0.05);
+    const weightKg = Math.round(finalCs * csWeight * 1000);
+    const tonnage = parseFloat((finalCs * csWeight).toFixed(2));
 
     totalFinal += finalCs;
     totalWeight += weightKg;
     totalTonnage += tonnage;
-    totalAddedT += (recCs || 0) * (sku.csWeight || 0.288);
+    totalAddedT += (recCs || 0) * csWeight;
 
     return {
       cbu: name,
@@ -67,12 +68,12 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
   const metrics = useMemo(() => {
     if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0 };
 
-    const capacityT = parseFloat(ind.weight) || 10;
-    const baseUtilNum = parseFloat(ind.utilFrom) || 73.7;
+    const capacityT = parseFloat(ind.truckCapacity || ind.weight) || 14;
+    const baseUtilNum = parseFloat(ind.baseFinalUtil || ind.final_utilization || ind.utilFrom) || 92.36;
     const baseWeightT = (baseUtilNum / 100) * capacityT;
     const addedWeightT = manifestData.totalAddedT;
     const finalWeightT = baseWeightT + addedWeightT;
-    const finalUtil = Math.min(100, Math.round((finalWeightT / capacityT) * 1000) / 10);
+    const finalUtil = parseFloat(ind.utilTo) || Math.round((baseUtilNum + (addedWeightT / capacityT) * 100) * 10) / 10;
 
     return {
       baseWeightT,
@@ -130,33 +131,39 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: "14px",
+          borderRadius: "12px",
+          height: "82vh",
+          maxHeight: "800px",
+          display: "flex",
+          flexDirection: "column",
           overflow: "hidden",
           boxShadow: "0 20px 40px rgba(0,0,0,0.2)",
         },
       }}
     >
       <ReviewHeader ind={ind} dcLabel={dcLabel} onClose={onClose} metrics={metrics} />
-      <DialogContent sx={{ p: 0 }}>
-        <div style={{ display: "flex", gap: 0, minHeight: 380 }}>
+      
+      <DialogContent sx={{ p: 0, flex: 1, overflowY: "auto", display: "flex", background: "white" }}>
+        <div style={{ display: "flex", width: "100%", minHeight: "100%" }}>
           <ReviewManifest manifestData={manifestData} />
           <ReviewValidation ind={ind} metrics={metrics} totalCases={manifestData.totalFinal} />
         </div>
-        <div className={styles.actionsContainer}>
-          <button onClick={onClose} disabled={isDispatching} className={styles.btnBack}>
-            Back To Edit
-          </button>
-          <button
-            className={styles.btnConfirm}
-            onClick={handleConfirmDispatch}
-            disabled={isDispatching}
-            style={{ display: "flex", alignItems: "center", gap: 6 }}
-          >
-            {isDispatching && <CircularProgress size={14} sx={{ color: "white" }} />}
-            {isDispatching ? "Dispatching..." : "Confirm & Dispatch"}
-          </button>
-        </div>
       </DialogContent>
+
+      <div className={styles.actionsContainer}>
+        <button onClick={onClose} disabled={isDispatching} className={styles.btnBack}>
+          Back To Edit
+        </button>
+        <button
+          className={styles.btnConfirm}
+          onClick={handleConfirmDispatch}
+          disabled={isDispatching}
+          style={{ display: "flex", alignItems: "center", gap: 6 }}
+        >
+          {isDispatching && <CircularProgress size={14} sx={{ color: "white" }} />}
+          {isDispatching ? "Dispatching..." : "Confirm & Dispatch"}
+        </button>
+      </div>
     </Dialog>
   );
 }

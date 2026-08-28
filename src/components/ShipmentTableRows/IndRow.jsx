@@ -4,8 +4,10 @@ import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import AddIcon from "@mui/icons-material/Add";
 import { SkuRow } from "./SkuRow";
 import { StatusBadge } from "./TableBadges";
@@ -24,11 +26,15 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const totalOrdQty = skus.reduce((s, r) => s + (r.ordQty || 0), 0);
   const totalOrdCs = skus.reduce((s, r) => s + (r.ordCs || 0), 0);
   const totalRecCs = skus.reduce((s, r) => s + (r.recCs || 0), 0);
-  const totalRecT = skus.reduce((s, r) => s + (r.recCs || 0) * (r.csWeight || 0), 0).toFixed(1);
+  const totalRecT = skus.reduce((s, r) => s + (r.recCs || 0) * (r.csWeight || 0.05), 0).toFixed(2);
   const totalElig = skus.reduce((s, r) => s + (r.elig || 0), 0);
 
+  const finalUtilNum = parseFloat(ind.utilTo) || ind.finalUtilNum || 92.4;
+  const isOverUtilized = ind.isOverUtilized != null ? ind.isOverUtilized : finalUtilNum > 100;
+  const tooltipMessage = "The utilization should be 100%, it should not be beyond 100%";
+
   return (
-    <TableRow className={styles.indRow} onClick={onToggle}>
+    <TableRow className={`${styles.indRow} ${isOverUtilized ? styles.indRowOverUtilized : ""}`} onClick={onToggle}>
       <TableCell className={`${styles.indCell} ${styles.indCellExpand}`} sx={{ width: COL.expand }}>
         <IconButton size="small" sx={{ p: 0 }}>
           {open ? <KeyboardArrowDownIcon className={styles.indIconExpand} /> : <KeyboardArrowRightIcon className={styles.indIconExpand} />}
@@ -39,8 +45,19 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.desc }}>
         <div className={styles.indDescContent}>
-          <span>{ind.weight} · </span><span className={styles.indUtil}>{ind.utilFrom}</span>
-          <span className={styles.indUtil}> → </span><span className={styles.indUtilTarget}>{ind.utilTo}</span>
+          <span>{ind.weight} · </span>
+          <span className={styles.indUtil}>{ind.utilFrom}</span>
+          <span className={styles.indUtil}> → </span>
+          <span className={isOverUtilized ? styles.indUtilOver : styles.indUtilTarget}>
+            {ind.utilTo}
+          </span>
+          {isOverUtilized && (
+            <Tooltip title={tooltipMessage} arrow placement="top">
+              <span className={styles.indInfoIconWrapper} onClick={(e) => e.stopPropagation()}>
+                <InfoOutlinedIcon className={styles.indInfoIcon} />
+              </span>
+            </Tooltip>
+          )}
         </div>
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.priority }}>
@@ -51,11 +68,11 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
         <span className={styles.indOrdQtySub}> / {totalOrdCs}cs /{ind.weight}</span>
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.recQty }}>
-        <span className={styles.indRecQty}>+{totalRecCs}cs</span>
+        <span className={isOverUtilized ? styles.indRecQtyOver : styles.indRecQty}>+{totalRecCs}cs</span>
         <span className={styles.indRecQtySub}> / +{totalRecT}T</span>
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.elig }}>
-        <span className={styles.indOrdQty}>{totalElig}cs</span>
+        <span className={styles.indOrdQty}>{totalElig.toLocaleString()}</span>
         <span className={styles.indOrdQtySub}> / {ind.weight}</span>
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.total }} />
@@ -64,9 +81,17 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       </TableCell>
       <TableCell className={styles.indCell} sx={{ width: COL.actions, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
         {ind.status === "ACCEPTED" && (
-          <button onClick={() => onReview(ind, dcLabel)} className={styles.indBtnReview}>
-            Review
-          </button>
+          <Tooltip title={isOverUtilized ? tooltipMessage : ""} arrow placement="top">
+            <span>
+              <button
+                disabled={isOverUtilized}
+                onClick={() => !isOverUtilized && onReview(ind, dcLabel)}
+                className={`${styles.indBtnReview} ${isOverUtilized ? styles.indBtnReviewDisabled : ""}`}
+              >
+                Review
+              </button>
+            </span>
+          </Tooltip>
         )}
       </TableCell>
     </TableRow>
