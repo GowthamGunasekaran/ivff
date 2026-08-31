@@ -40,7 +40,7 @@ export const AppProvider = ({ children }) => {
   }, []);
 
   // Factory Inventory State
-  const [factoryExpanded, setFactoryExpanded] = useState({});
+  const [factoryExpanded, setFactoryExpanded] = useState({ "Delhi Plant": true });
   const toggleFactory = useCallback((name) => {
     setFactoryExpanded((prev) => ({ ...prev, [name]: !prev[name] }));
   }, []);

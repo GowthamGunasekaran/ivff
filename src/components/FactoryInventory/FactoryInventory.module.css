@@ -5,8 +5,9 @@
   border-radius: 12px;
   border: 1px solid #d9dce1;
   width: 100%;
-  max-height: 340px;
+  max-height: 380px;
   overflow: hidden;
+  background-color: #ffffff;
 }
 
 .header {
@@ -15,6 +16,7 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 10px 14px 9px;
+  background-color: #ffffff;
 }
 
 .titleRow {
@@ -35,18 +37,18 @@
 .badge {
   background-color: #e4ebff;
   color: #2c4cd3;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 700;
   letter-spacing: 0.4px;
   padding: 1px 7px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .statsRow {
   display: flex;
   gap: 12px;
   align-items: center;
-  padding-top: 2px;
+  padding-top: 3px;
 }
 
 .statText {
@@ -54,24 +56,50 @@
   font-size: 9px;
 }
 
+.tableWrapper {
+  overflow-y: auto;
+  flex: 1;
+}
+
 .rowName {
   font-weight: 700;
   color: #1f2430;
   font-size: 11px;
+  line-height: 1.2;
 }
 
 .rowCode {
   color: #5a6072;
-  font-size: 8px;
+  font-size: 8.5px;
+  line-height: 1.2;
+  margin-top: 2px;
 }
 
 .detailName {
   font-weight: 700;
   color: #1f2430;
-  font-size: 10px;
+  font-size: 10.5px;
+  line-height: 1.2;
 }
 
 .detailLocation {
-  color: #5a6072;
-  font-size: 8px;
+  color: #71788e;
+  font-size: 8.5px;
+  line-height: 1.2;
+  margin-top: 1px;
+}
+
+.progressBar {
+  width: 76px;
+  height: 3px;
+  background-color: #d9dce1;
+  border-radius: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background-color: #2e9e5b;
+  border-radius: 2px;
 }
