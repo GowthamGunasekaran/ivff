@@ -36,10 +36,7 @@ function normalizeShipment(raw) {
     ? (parseFloat(raw.utilFrom) <= 1 ? parseFloat(raw.utilFrom) * 100 : parseFloat(raw.utilFrom))
     : (rawChildren[0] ? parseFloat(rawChildren[0].initial_utilization) * 100 : 88.0);
 
-  const baseFinalUtil = raw.utilTo != null
-    ? (parseFloat(raw.utilTo) <= 1 ? parseFloat(raw.utilTo) * 100 : parseFloat(raw.utilTo))
-    : (rawChildren[0] ? parseFloat(rawChildren[0].final_utilization) * 100 : 92.6);
-
+  let totalRecWeightT = 0;
   const children = rawChildren.map((c) => {
     const recQty = parseFloat(c.recQty) || 0;
     const eligible = Number(c.eligible) || 0;
@@ -49,6 +46,7 @@ function normalizeShipment(raw) {
     const csWeight = unitWeight / 1000;
     const totalQty = ord_qty + recQty;
     const totalT = (netweight + recQty * csWeight).toFixed(2);
+    totalRecWeightT += recQty * csWeight;
 
     return {
       ...c,
@@ -61,8 +59,10 @@ function normalizeShipment(raw) {
     };
   });
 
-  const isOverUtilized = baseFinalUtil > loadCap;
-  const remainingCap = parseFloat((loadCap - baseFinalUtil).toFixed(1));
+  const addedUtilPercent = capacityT > 0 ? (totalRecWeightT / capacityT) * 100 : 0;
+  const finalUtilNum = parseFloat((initialUtilNum + addedUtilPercent).toFixed(1));
+  const isOverUtilized = finalUtilNum > loadCap;
+  const remainingCap = parseFloat((loadCap - finalUtilNum).toFixed(1));
 
   return {
     ...raw,
@@ -71,10 +71,12 @@ function normalizeShipment(raw) {
     truckCapacity: capacityT,
     loadabilityCap: loadCap,
     initialUtil: initialUtilNum,
-    baseFinalUtil,
-    finalUtilNum: baseFinalUtil,
+    utilFrom: initialUtilNum,
+    finalUtilNum,
+    utilTo: finalUtilNum,
     isOverUtilized,
     remainingCap,
+    addedWeightT: totalRecWeightT,
     children,
   };
 }
@@ -256,43 +258,49 @@ export const AppProvider = ({ children }) => {
         return prev;
       }
 
+      let currentRecWeightT = 0;
       const updatedSkus = skuList.map((s, i) => {
-        if (i !== skuIdx) return s;
+        const itemRecQty = i === skuIdx ? clampedVal : (parseFloat(s.recQty) || 0);
+        const itemElig = i === skuIdx ? newElig : s.eligible;
         const ord_qty = Number(s.ord_qty) || 0;
         const netweight = parseFloat(s.netweight) || 0;
-        const csWeight = s.csWeight || ((parseFloat(s.weight) || 4) / 1000);
-        const totalQty = ord_qty + clampedVal;
-        const totalT = (netweight + clampedVal * csWeight).toFixed(2);
+        const unitWeight = parseFloat(s.weight) || 4;
+        const csWeight = s.csWeight || (unitWeight / 1000);
+        const totalQty = ord_qty + itemRecQty;
+        const totalT = (netweight + itemRecQty * csWeight).toFixed(2);
+        
+        currentRecWeightT += itemRecQty * csWeight;
+
+        if (i !== skuIdx) {
+          return {
+            ...s,
+            csWeight,
+            total: `${totalQty.toLocaleString()} / ${totalT}T`,
+          };
+        }
+
         return {
           ...s,
           maxElig: maxPool,
           recQty: clampedVal,
           eligible: newElig,
+          csWeight,
           total: `${totalQty.toLocaleString()} / ${totalT}T`,
         };
       });
 
-      const capacityT = parseFloat(currentInd.weight) || 18;
-      const baseFinalUtil = parseFloat(currentInd.baseFinalUtil) || 92.6;
+      const capacityT = parseFloat(currentInd.truckCapacity || currentInd.weight) || 18.0;
+      const initialUtilNum = currentInd.initialUtil != null ? currentInd.initialUtil : 88.0;
       const loadCap = parseFloat(currentInd.loadabilityCap) || 99.0;
       
-      const baseRecWeightT = skuList.reduce(
-        (sum, s) => sum + (s.baseRecQty || 0) * (s.csWeight || 0.004),
-        0
-      );
-      const currentRecWeightT = updatedSkus.reduce(
-        (sum, s) => sum + (s.recQty || 0) * (s.csWeight || 0.004),
-        0
-      );
-      const deltaWeightT = currentRecWeightT - baseRecWeightT;
-      const deltaUtil = (deltaWeightT / capacityT) * 100;
-      const finalUtilNum = parseFloat((baseFinalUtil + deltaUtil).toFixed(1));
+      const addedUtilPercent = capacityT > 0 ? (currentRecWeightT / capacityT) * 100 : 0;
+      const finalUtilNum = parseFloat((initialUtilNum + addedUtilPercent).toFixed(1));
       const isOverUtilized = finalUtilNum > loadCap;
       const remainingCap = parseFloat((loadCap - finalUtilNum).toFixed(1));
 
       const updatedInd = {
         ...currentInd,
-        utilTo: finalUtilNum <= 1 ? finalUtilNum : finalUtilNum / 100,
+        utilTo: finalUtilNum,
         finalUtilNum,
         isOverUtilized,
         remainingCap,

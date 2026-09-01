@@ -33,11 +33,17 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const totalRecCs = skus.reduce((s, r) => s + (parseFloat(r.recQty) || 0), 0);
   const totalRecT = skus.reduce((s, r) => s + (parseFloat(r.recQty) || 0) * (r.csWeight || ((parseFloat(r.weight) || 4) / 1000)), 0).toFixed(2);
   const totalElig = skus.reduce((s, r) => s + (Number(r.eligible) || 0), 0);
+  const initialUtilNum = ind.initialUtil != null
+    ? ind.initialUtil
+    : (typeof ind.utilFrom === "number" ? (ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom) : parseFloat(ind.utilFrom) || 88.0);
 
-  const utilFromFormatted = typeof ind.utilFrom === "number" ? `${(ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom).toFixed(1)}%` : ind.utilFrom;
-  const utilToFormatted = typeof ind.utilTo === "number" ? `${(ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo).toFixed(1)}%` : ind.utilTo;
-  const finalUtilNum = ind.finalUtilNum != null ? ind.finalUtilNum : (parseFloat(utilToFormatted) || 92.6);
-  const isOverUtilized = ind.isOverUtilized != null ? ind.isOverUtilized : finalUtilNum > cap;
+  const finalUtilNum = ind.finalUtilNum != null
+    ? ind.finalUtilNum
+    : (typeof ind.utilTo === "number" ? (ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo) : parseFloat(ind.utilTo) || initialUtilNum);
+
+  const isOverUtilized = finalUtilNum > cap;
+  const utilFromFormatted = `${initialUtilNum.toFixed(1)}%`;
+  const utilToFormatted = `${finalUtilNum.toFixed(1)}%`;
   const tooltipMessage = `The utilization should be ${cap}%, it should not be beyond ${cap}%`;
 
   const totalSumQty = totalOrdQty + totalRecCs;

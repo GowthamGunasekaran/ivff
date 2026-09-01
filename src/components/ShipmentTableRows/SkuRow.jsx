@@ -29,9 +29,23 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
 
   const handleChange = (e) => {
     const raw = e.target.value;
-    const num = Number(raw);
-    setVal(raw);
-    if (!isNaN(num) && onRecChange) {
+    if (raw === "") {
+      setVal("");
+      if (onRecChange) onRecChange(0);
+      return;
+    }
+    let num = Number(raw);
+    if (isNaN(num)) return;
+
+    // Strict boundary: Max value allowed is recommended + eligible (maxPool)
+    if (num > maxPool) {
+      num = maxPool;
+    } else if (num < 0) {
+      num = 0;
+    }
+
+    setVal(num);
+    if (onRecChange) {
       onRecChange(num);
     }
   };
