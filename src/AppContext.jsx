@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import { fetchFilters, fetchMinDate } from "./api/filterApi";
@@ -10,6 +10,74 @@ import { fetchPlantHierarchy, fetchShipmentDetails, updateShipmentPlan, searchSh
 const AppContext = createContext();
 
 export const useAppContext = () => useContext(AppContext);
+
+// Pure helper to extract factory details mapping
+function extractFactoryDetails(factoryRes) {
+  if (!factoryRes) return { list: [], details: null };
+  const list = Array.isArray(factoryRes) ? factoryRes : factoryRes.data || factoryRes.initFactories || [];
+  if (factoryRes.initFactoryDetails) {
+    return { list, details: factoryRes.initFactoryDetails };
+  }
+  const details = {};
+  list.forEach((f) => {
+    if (f.name && f.children) details[f.name] = f.children;
+  });
+  return { list, details };
+}
+
+// Pure function: Normalizes shipment data based on permanent payload schema
+function normalizeShipment(raw) {
+  const shipmentId = raw.shipmentId || raw.id;
+  const rawChildren = raw.children || [];
+  const capacityT = parseFloat(raw.weight) || (rawChildren[0] ? parseFloat(rawChildren[0].capacity) : 18.0);
+  const loadCap = rawChildren[0]?.cap != null ? parseFloat(rawChildren[0].cap) : 99.0;
+
+  const initialUtilNum = raw.utilFrom != null
+    ? (parseFloat(raw.utilFrom) <= 1 ? parseFloat(raw.utilFrom) * 100 : parseFloat(raw.utilFrom))
+    : (rawChildren[0] ? parseFloat(rawChildren[0].initial_utilization) * 100 : 88.0);
+
+  const baseFinalUtil = raw.utilTo != null
+    ? (parseFloat(raw.utilTo) <= 1 ? parseFloat(raw.utilTo) * 100 : parseFloat(raw.utilTo))
+    : (rawChildren[0] ? parseFloat(rawChildren[0].final_utilization) * 100 : 92.6);
+
+  const children = rawChildren.map((c) => {
+    const recQty = parseFloat(c.recQty) || 0;
+    const eligible = Number(c.eligible) || 0;
+    const ord_qty = Number(c.ord_qty) || 0;
+    const netweight = parseFloat(c.netweight) || 0;
+    const unitWeight = parseFloat(c.weight) || 4;
+    const csWeight = unitWeight / 1000;
+    const totalQty = ord_qty + recQty;
+    const totalT = (netweight + recQty * csWeight).toFixed(2);
+
+    return {
+      ...c,
+      recQty,
+      baseRecQty: recQty,
+      eligible,
+      maxElig: eligible + recQty,
+      csWeight,
+      total: `${totalQty.toLocaleString()} / ${totalT}T`,
+    };
+  });
+
+  const isOverUtilized = baseFinalUtil > loadCap;
+  const remainingCap = parseFloat((loadCap - baseFinalUtil).toFixed(1));
+
+  return {
+    ...raw,
+    id: shipmentId,
+    shipmentId,
+    truckCapacity: capacityT,
+    loadabilityCap: loadCap,
+    initialUtil: initialUtilNum,
+    baseFinalUtil,
+    finalUtilNum: baseFinalUtil,
+    isOverUtilized,
+    remainingCap,
+    children,
+  };
+}
 
 export const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -23,6 +91,12 @@ export const AppProvider = ({ children }) => {
   const [selectedDate, setSelectedDate] = useState("2026-08-01");
   const [currentStartDate, setCurrentStartDate] = useState(null);
   const [currentEndDate, setCurrentEndDate] = useState(null);
+
+  // Keep a stable ref for filters & dates to avoid re-creating callbacks
+  const filterContextRef = useRef({ filters, currentStartDate, currentEndDate, selectedDate, minDate });
+  useEffect(() => {
+    filterContextRef.current = { filters, currentStartDate, currentEndDate, selectedDate, minDate };
+  }, [filters, currentStartDate, currentEndDate, selectedDate, minDate]);
 
   // API Data States
   const [kpiData, setKpiData] = useState(null);
@@ -51,142 +125,94 @@ export const AppProvider = ({ children }) => {
   const [dcLoadingState, setDcLoadingState] = useState({});
   const [dcErrorState, setDcErrorState] = useState({});
 
-  // Search & Debouncing State (2s debounce)
+  // Search & Debouncing State (250ms debounce)
   const [shipmentSearch, setShipmentSearch] = useState("");
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const [searchResultsData, setSearchResultsData] = useState(null);
 
-  // Single-Plant Accordion State: Only 1 active plant expanded at a time to optimize DOM footprint
+  // Single-Plant Accordion State
   const [openPlants, setOpenPlants] = useState({ delhi: true });
   const [openDcs, setOpenDcs] = useState({});
   const [openInds, setOpenInds] = useState({});
   const [reviewInd, setReviewInd] = useState(null);
   const [reviewDc, setReviewDc] = useState("");
 
-  // Accordion Plant Toggle: Expands selected plant and collapses all others
   const togglePlant = useCallback((id) => {
-    setOpenPlants((prev) => {
-      const isCurrentlyOpen = !!prev[id];
-      return isCurrentlyOpen ? {} : { [id]: true };
-    });
+    setOpenPlants((prev) => (prev[id] ? {} : { [id]: true }));
   }, []);
 
   const toggleInd = useCallback((id) => {
     setOpenInds((p) => ({ ...p, [id]: !p[id] }));
   }, []);
 
-  // Normalizes shipment data based on permanent payload schema
-  const normalizeShipment = useCallback((raw) => {
-    const shipmentId = raw.shipmentId || raw.id;
-    const rawChildren = raw.children || [];
-    const capacityT = parseFloat(raw.weight) || (rawChildren[0] ? parseFloat(rawChildren[0].capacity) : 18.0);
-    const loadCap = rawChildren[0]?.cap != null ? parseFloat(rawChildren[0].cap) : 99.0;
-
-    const initialUtilNum = raw.utilFrom != null
-      ? (parseFloat(raw.utilFrom) <= 1 ? parseFloat(raw.utilFrom) * 100 : parseFloat(raw.utilFrom))
-      : (rawChildren[0] ? parseFloat(rawChildren[0].initial_utilization) * 100 : 88.0);
-
-    const baseFinalUtil = raw.utilTo != null
-      ? (parseFloat(raw.utilTo) <= 1 ? parseFloat(raw.utilTo) * 100 : parseFloat(raw.utilTo))
-      : (rawChildren[0] ? parseFloat(rawChildren[0].final_utilization) * 100 : 92.6);
-
-    const children = rawChildren.map((c) => {
-      const recQty = parseFloat(c.recQty) || 0;
-      const eligible = Number(c.eligible) || 0;
-      const ord_qty = Number(c.ord_qty) || 0;
-      const netweight = parseFloat(c.netweight) || 0;
-      const unitWeight = parseFloat(c.weight) || 4;
-      const csWeight = unitWeight / 1000;
-      const totalQty = ord_qty + recQty;
-      const totalT = (netweight + recQty * csWeight).toFixed(2);
-
-      return {
-        ...c,
-        recQty,
-        baseRecQty: recQty,
-        eligible,
-        maxElig: eligible + recQty,
-        csWeight,
-        total: `${totalQty.toLocaleString()} / ${totalT}T`,
-      };
+  // API 2: Called when user expands a Receiving Plant (DC)
+  const toggleDc = useCallback(async (plantId, dcId) => {
+    setOpenDcs((prev) => {
+      const isCurrentlyOpen = !!prev[dcId];
+      return { ...prev, [dcId]: !isCurrentlyOpen };
     });
 
-    const isOverUtilized = baseFinalUtil > loadCap;
-    const remainingCap = parseFloat((loadCap - baseFinalUtil).toFixed(1));
-
-    return {
-      ...raw,
-      id: shipmentId,
-      shipmentId,
-      truckCapacity: capacityT,
-      loadabilityCap: loadCap,
-      initialUtil: initialUtilNum,
-      baseFinalUtil,
-      finalUtilNum: baseFinalUtil,
-      isOverUtilized,
-      remainingCap,
-      children,
-    };
-  }, []);
-
-  // API 2: Called only when the user expands a Receiving Plant (DC)
-  const toggleDc = useCallback(async (plantId, dcId) => {
-    const isCurrentlyOpen = !!openDcs[dcId];
-    setOpenDcs((prev) => ({ ...prev, [dcId]: !isCurrentlyOpen }));
-
-    if (!isCurrentlyOpen) {
-      const cacheKey = `${plantId}_${dcId}`;
-      if (!dcShipmentsCache[cacheKey]) {
+    const cacheKey = `${plantId}_${dcId}`;
+    setDcShipmentsCache((currentCache) => {
+      if (!currentCache[cacheKey]) {
         setDcLoadingState((prev) => ({ ...prev, [cacheKey]: true }));
         setDcErrorState((prev) => ({ ...prev, [cacheKey]: null }));
-        try {
-          const dateVal = filters?.date || filters?.startDate || currentStartDate || selectedDate || minDate || "";
-          const data = await fetchShipmentDetails({
-            sendingPlant: plantId,
-            receivingPlant: dcId,
-            CBU: filters?.CBU || [],
-            class: filters?.class || "All",
-            fromDate: filters?.startDate || dateVal,
-            toDate: filters?.endDate || dateVal,
-          });
-          const rawShipments = Array.isArray(data) ? data : data.data || [];
-          const shipments = rawShipments.map(normalizeShipment);
-          setDcShipmentsCache((prev) => ({ ...prev, [cacheKey]: shipments }));
 
-          // Auto-expand shipments when loaded
-          const initialOpenInds = {};
-          shipments.forEach((ind) => {
-            initialOpenInds[ind.id] = true;
+        const { filters: curFilters, currentStartDate: curStart, selectedDate: curDate, minDate: curMin } = filterContextRef.current;
+        const dateVal = curFilters?.date || curFilters?.startDate || curStart || curDate || curMin || "";
+
+        fetchShipmentDetails({
+          sendingPlant: plantId,
+          receivingPlant: dcId,
+          CBU: curFilters?.CBU || [],
+          class: curFilters?.class || "All",
+          fromDate: curFilters?.startDate || dateVal,
+          toDate: curFilters?.endDate || dateVal,
+        })
+          .then((data) => {
+            const rawShipments = Array.isArray(data) ? data : data.data || [];
+            const shipments = rawShipments.map(normalizeShipment);
+            setDcShipmentsCache((prev) => ({ ...prev, [cacheKey]: shipments }));
+
+            const initialOpenInds = {};
+            shipments.forEach((ind) => {
+              initialOpenInds[ind.id] = true;
+            });
+            setOpenInds((prev) => ({ ...prev, ...initialOpenInds }));
+          })
+          .catch((err) => {
+            console.error("API 2 error for DC:", dcId, err);
+            setDcErrorState((prev) => ({
+              ...prev,
+              [cacheKey]: err.message || "Failed to load shipments",
+            }));
+          })
+          .finally(() => {
+            setDcLoadingState((prev) => ({ ...prev, [cacheKey]: false }));
           });
-          setOpenInds((prev) => ({ ...prev, ...initialOpenInds }));
-        } catch (err) {
-          console.error("API 2 error for DC:", dcId, err);
-          setDcErrorState((prev) => ({
-            ...prev,
-            [cacheKey]: err.message || "Failed to load shipments",
-          }));
-        } finally {
-          setDcLoadingState((prev) => ({ ...prev, [cacheKey]: false }));
-        }
       }
-    }
-  }, [openDcs, dcShipmentsCache, filters, normalizeShipment, currentStartDate, selectedDate, minDate]);
+      return currentCache;
+    });
+  }, []);
 
   // Retry API 2 for a failed Receiving Plant
   const retryFetchDc = useCallback(async (plantId, dcId) => {
     const cacheKey = `${plantId}_${dcId}`;
     setDcLoadingState((prev) => ({ ...prev, [cacheKey]: true }));
     setDcErrorState((prev) => ({ ...prev, [cacheKey]: null }));
+
+    const { filters: curFilters, currentStartDate: curStart, selectedDate: curDate, minDate: curMin } = filterContextRef.current;
+    const dateVal = curFilters?.date || curFilters?.startDate || curStart || curDate || curMin || "";
+
     try {
-      const dateVal = filters?.date || filters?.startDate || currentStartDate || selectedDate || minDate || "";
       const data = await fetchShipmentDetails({
         sendingPlant: plantId,
         receivingPlant: dcId,
-        CBU: filters?.CBU || [],
-        class: filters?.class || "All",
-        fromDate: filters?.startDate || dateVal,
-        toDate: filters?.endDate || dateVal,
+        CBU: curFilters?.CBU || [],
+        class: curFilters?.class || "All",
+        fromDate: curFilters?.startDate || dateVal,
+        toDate: curFilters?.endDate || dateVal,
       });
       const rawShipments = Array.isArray(data) ? data : data.data || [];
       const shipments = rawShipments.map(normalizeShipment);
@@ -206,9 +232,9 @@ export const AppProvider = ({ children }) => {
     } finally {
       setDcLoadingState((prev) => ({ ...prev, [cacheKey]: false }));
     }
-  }, [filters, normalizeShipment, currentStartDate, selectedDate, minDate]);
+  }, []);
 
-  // Live edit handler for SKU recommendation changes
+  // Live edit handler for SKU recommendation changes — optimized with stable callback
   const handleRecChange = useCallback((plantId, dcId, indId, skuIdx, val) => {
     const cacheKey = `${plantId}_${dcId}`;
     setDcShipmentsCache((prev) => {
@@ -375,6 +401,7 @@ export const AppProvider = ({ children }) => {
     };
   }, [debouncedSearchTerm, filters]);
 
+  // Auto-expand matching nodes on search
   useEffect(() => {
     if (!debouncedSearchTerm || plantsData.length === 0) return;
     const newPlants = {}, newDcs = {}, newInds = {};
@@ -411,9 +438,11 @@ export const AppProvider = ({ children }) => {
     setOpenInds((p) => ({ ...p, ...newInds }));
   }, [debouncedSearchTerm, plantsData, dcShipmentsCache]);
 
+  // Cascading Filter Handler
   const applyFilters = useCallback(async (newFilters) => {
     setFilters(newFilters);
-    const dateVal = newFilters.date || newFilters.startDate || currentStartDate || selectedDate || minDate || "2026-08-01";
+    const { currentStartDate: curStart, selectedDate: curDate, minDate: curMin } = filterContextRef.current;
+    const dateVal = newFilters.date || newFilters.startDate || curStart || curDate || curMin || "2026-08-01";
     const payload = {
       ...newFilters,
       date: dateVal,
@@ -437,23 +466,15 @@ export const AppProvider = ({ children }) => {
         fetchPlantHierarchy(payload),
       ]);
 
-      if (filtersRes && filtersRes.filterDefs) {
+      if (filtersRes?.filterDefs) {
         setFilterDefs(filtersRes.filterDefs);
       }
       if (kpiRes) setKpiData(kpiRes);
       if (chartsRes) setChartsData(chartsRes);
       if (factoryRes) {
-        const factoriesList = Array.isArray(factoryRes) ? factoryRes : factoryRes.data || factoryRes.initFactories || [];
-        setFactories(factoriesList);
-        if (factoryRes.initFactoryDetails) {
-          setFactoryDetails(factoryRes.initFactoryDetails);
-        } else {
-          const detailsMap = {};
-          factoriesList.forEach((f) => {
-            if (f.name && f.children) detailsMap[f.name] = f.children;
-          });
-          setFactoryDetails(detailsMap);
-        }
+        const { list, details } = extractFactoryDetails(factoryRes);
+        setFactories(list);
+        setFactoryDetails(details);
       }
       if (plantsRes) {
         setPlantsData(Array.isArray(plantsRes) ? plantsRes : plantsRes.data || []);
@@ -461,8 +482,9 @@ export const AppProvider = ({ children }) => {
     } catch (error) {
       console.error("Failed to apply cascading filters across dashboard:", error);
     }
-  }, [currentStartDate, selectedDate, minDate]);
+  }, []);
 
+  // Initial Load Flow: Step 1 Min Date -> Step 2 Dashboard APIs with initial date
   useEffect(() => {
     const loadAllData = async () => {
       try {
@@ -513,18 +535,11 @@ export const AppProvider = ({ children }) => {
         setChartsData(chartsRes);
         
         if (factoryRes) {
-          const factoriesList = Array.isArray(factoryRes) ? factoryRes : factoryRes.data || factoryRes.initFactories || [];
-          setFactories(factoriesList);
-          if (factoryRes.initFactoryDetails) {
-            setFactoryDetails(factoryRes.initFactoryDetails);
-          } else {
-            const detailsMap = {};
-            factoriesList.forEach((f) => {
-              if (f.name && f.children) detailsMap[f.name] = f.children;
-            });
-            setFactoryDetails(detailsMap);
-          }
+          const { list, details } = extractFactoryDetails(factoryRes);
+          setFactories(list);
+          setFactoryDetails(details);
         }
+
         setPlantsData(Array.isArray(plantsRes) ? plantsRes : plantsRes.data || []);
       } catch (error) {
         console.error("Failed to load application data:", error);
@@ -535,6 +550,7 @@ export const AppProvider = ({ children }) => {
     loadAllData();
   }, []);
 
+  // Optimized value bundle: Callbacks are completely stable to prevent consumer re-rendering
   const value = useMemo(() => ({
     isLoading,
     kpiData,
@@ -553,7 +569,7 @@ export const AppProvider = ({ children }) => {
     currentEndDate,
     setCurrentEndDate,
 
-    // States
+    // States & Navigation
     activeTab,
     setActiveTab,
     filters,
@@ -564,7 +580,7 @@ export const AppProvider = ({ children }) => {
     factoryExpanded,
     toggleFactory,
 
-    // Shipment / Dynamic Hierarchy Handlers & State
+    // Hierarchy / Shipment States & Handlers
     plantsData,
     setPlantsData,
     shipmentsData: plantsData,
@@ -589,6 +605,7 @@ export const AppProvider = ({ children }) => {
     reviewDc,
     setReviewDc,
     handleRecChange,
+    updateShipmentStatus,
     confirmAndDispatchPlan,
     showToast,
     searchTerm: shipmentSearch,
@@ -629,6 +646,7 @@ export const AppProvider = ({ children }) => {
     reviewInd,
     reviewDc,
     handleRecChange,
+    updateShipmentStatus,
     confirmAndDispatchPlan,
     showToast,
   ]);
@@ -657,3 +675,5 @@ export const AppProvider = ({ children }) => {
     </AppContext.Provider>
   );
 };
+
+export default AppContext;
