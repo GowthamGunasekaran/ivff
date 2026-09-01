@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
+import CircularProgress from "@mui/material/CircularProgress";
 import { fetchFilters, fetchMinDate } from "./api/filterApi";
 import { fetchKPIs } from "./api/kpiApi";
 import { fetchChartTrends } from "./api/chartApi";
@@ -83,6 +84,7 @@ function normalizeShipment(raw) {
 
 export const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
+  const [isFilterLoading, setIsFilterLoading] = useState(false);
 
   // Global App State
   const [activeTab, setActiveTab] = useState(0);
@@ -449,6 +451,7 @@ export const AppProvider = ({ children }) => {
   // Cascading Filter Handler
   const applyFilters = useCallback(async (newFilters) => {
     setFilters(newFilters);
+    setIsFilterLoading(true);
     const { currentStartDate: curStart, selectedDate: curDate, minDate: curMin } = filterContextRef.current;
     const dateVal = newFilters.date || newFilters.startDate || curStart || curDate || curMin || "2026-08-01";
     const payload = {
@@ -489,6 +492,8 @@ export const AppProvider = ({ children }) => {
       }
     } catch (error) {
       console.error("Failed to apply cascading filters across dashboard:", error);
+    } finally {
+      setIsFilterLoading(false);
     }
   }, []);
 
@@ -583,6 +588,7 @@ export const AppProvider = ({ children }) => {
     filters,
     setFilters,
     applyFilters,
+    isFilterLoading,
 
     // Factory Handlers
     factoryExpanded,
@@ -633,6 +639,7 @@ export const AppProvider = ({ children }) => {
     activeTab,
     filters,
     applyFilters,
+    isFilterLoading,
     factoryExpanded,
     toggleFactory,
     plantsData,
@@ -670,6 +677,45 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={value}>
       {children}
+      {isFilterLoading && (
+        <div
+          style={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 9999,
+            backgroundColor: "rgba(255, 255, 255, 0.45)",
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "opacity 0.2s ease-in-out",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 10,
+              padding: "16px 28px",
+              background: "rgba(255, 255, 255, 0.95)",
+              boxShadow: "0 8px 30px rgba(44, 76, 211, 0.15)",
+              borderRadius: 12,
+              border: "1px solid rgba(44, 76, 211, 0.15)",
+            }}
+          >
+            <CircularProgress size={30} thickness={4} sx={{ color: "#2c4cd3" }} />
+            <span style={{ fontSize: 13, fontWeight: 600, color: "#1f2430", letterSpacing: "0.2px" }}>
+              Updating Dashboard...
+            </span>
+          </div>
+        </div>
+      )}
       <Snackbar
         open={snackbar.open}
         autoHideDuration={4000}
