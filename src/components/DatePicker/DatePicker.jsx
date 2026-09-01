@@ -18,10 +18,18 @@ const getTodayDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
+const isValidDate = (str) => {
+  if (!str || typeof str !== "string") return false;
+  if (str.includes("<") || str.includes(">") || str.toLowerCase().includes("doctype") || str.toLowerCase().includes("html")) {
+    return false;
+  }
+  const parts = str.split("-");
+  return parts.length === 3 && !isNaN(new Date(str).getTime());
+};
+
 function formatDateDisplay(dateStr) {
-  if (!dateStr) return "";
+  if (!isValidDate(dateStr)) return "Jan 01, 2026";
   const parts = dateStr.split("-");
-  if (parts.length !== 3) return dateStr;
   const year = parts[0];
   const monthIdx = parseInt(parts[1], 10) - 1;
   const day = parts[2];
@@ -47,10 +55,15 @@ export default function DatePicker({
   const [anchorEl, setAnchorEl] = useState(null);
   const open = Boolean(anchorEl);
 
-  const effectiveDefault = defaultDate || getTodayDateString();
-  const effectiveDate = date || effectiveDefault;
+  const fallbackDefault = getTodayDateString();
+  const effectiveDefault = isValidDate(defaultDate) ? defaultDate : (isValidDate(minDate) ? minDate : fallbackDefault);
+  const effectiveDate = isValidDate(date) ? date : effectiveDefault;
 
-  const initialDate = useMemo(() => new Date(effectiveDate), [effectiveDate]);
+  const initialDate = useMemo(() => {
+    const d = new Date(effectiveDate);
+    return !isNaN(d.getTime()) ? d : new Date();
+  }, [effectiveDate]);
+
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
 

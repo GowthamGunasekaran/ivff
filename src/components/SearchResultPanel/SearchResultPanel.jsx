@@ -39,10 +39,10 @@ export default function SearchResultPanel({
         const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
         shipments.forEach((ind) => {
           let shipmentMatched = false;
-          const skus = ind.children || ind.skus || [];
+          const skus = ind.children || [];
           skus.forEach((s) => {
-            const id = s.id || s.material || "";
-            const desc = s.desc || s.materialDescription || "";
+            const id = s.Material || s.id || "";
+            const desc = s.MaterialDescription || s.desc || "";
             if (
               id.toLowerCase().includes(termLower) ||
               desc.toLowerCase().includes(termLower)
@@ -59,7 +59,7 @@ export default function SearchResultPanel({
                   dcsCount: new Set(),
                 };
               }
-              const alloc = (s.ordQty || 0) + (s.recCs || 0);
+              const alloc = (Number(s.ord_qty) || 0) + (parseFloat(s.recQty) || 0);
               materialMap[id].allocated += alloc || 100;
               materialMap[id].shipmentsCount += 1;
               materialMap[id].dcsCount.add(dc.id);

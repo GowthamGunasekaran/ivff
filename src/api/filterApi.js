@@ -71,6 +71,52 @@ export const computeCascadingFilters = (payload = {}) => {
   };
 };
 
+const isValidDateString = (str) => {
+  if (!str || typeof str !== "string") return false;
+  if (str.includes("<") || str.includes(">") || str.toLowerCase().includes("doctype") || str.toLowerCase().includes("html")) {
+    return false;
+  }
+  const parsed = Date.parse(str);
+  return !isNaN(parsed);
+};
+
+export const fetchMinDate = async () => {
+  try {
+    const response = await fetch("/api/v1/min-date", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+      },
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    const contentType = response.headers.get("content-type");
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error("Received non-JSON response from /api/v1/min-date");
+    }
+
+    const result = await response.json();
+    const minDateVal =
+      result.minDate ||
+      result.date ||
+      result.startDate ||
+      result.data?.minDate ||
+      result.data?.date ||
+      result.data?.startDate ||
+      (typeof result === "string" ? result : null);
+
+    if (isValidDateString(minDateVal)) {
+      return String(minDateVal).trim();
+    }
+    return minDate;
+  } catch (error) {
+    console.warn("Error fetching minimum date, falling back to default minDate:", error);
+    return minDate;
+  }
+};
+
 export const fetchFilters = async (payload = {}) => {
   try {
     const response = await fetch("/api/v1/filters", {

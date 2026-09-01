@@ -3,18 +3,20 @@ import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import styles from "./ReviewDialog.module.css";
 
 export default function ReviewValidation({ ind, metrics, totalCases }) {
-  const capacityT = parseFloat(ind.truckCapacity || ind.weight) || 14;
-  const currentUtil = parseFloat(ind.initialUtil || ind.utilFrom) || 95.0;
-  const finalUtil = parseFloat(ind.utilTo) || metrics.finalUtil;
+  const skus = ind.children || [];
+  const loadCap = (skus[0]?.cap != null ? parseFloat(skus[0].cap) : null) || parseFloat(ind.loadabilityCap) || 99.0;
+  const capacityT = parseFloat(ind.weight) || 18.0;
+  const currentUtil = typeof ind.utilFrom === "number" ? (ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom) : (parseFloat(ind.utilFrom) || 88.0);
+  const finalUtil = typeof ind.utilTo === "number" ? (ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo) : (parseFloat(ind.utilTo) || metrics?.finalUtil || 92.6);
   const utilGainVal = Math.max(0, finalUtil - currentUtil);
-  const isHighRisk = finalUtil >= 98;
+  const isHighRisk = finalUtil > loadCap;
 
   const validationItems = [
-    { label: "Truck Capacity", detail: `${finalUtil.toFixed(1)}% / 100%`, ok: finalUtil <= 100 },
+    { label: "Truck Capacity", detail: `${finalUtil.toFixed(1)}% / ${loadCap}%`, ok: finalUtil <= loadCap },
     { label: "Freshness Risk", detail: isHighRisk ? "HIGH" : "NORMAL", ok: !isHighRisk },
     { label: "Order Loss Risk", detail: "₹2L", ok: false },
     { label: "Payload", detail: `${metrics.finalWeightT.toFixed(1)}T / ${capacityT}T`, ok: metrics.finalWeightT <= capacityT },
-    { label: "Total Cases", detail: `${totalCases} cases`, ok: true },
+    { label: "Total Cases", detail: `${totalCases.toLocaleString()} cases`, ok: true },
     { label: "Util Gain", detail: `+${utilGainVal.toFixed(1)}%`, ok: true },
   ];
 

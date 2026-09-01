@@ -154,10 +154,10 @@ export const computeMockSearchResults = (term) => {
   Object.entries(mockShipmentDetailsByDc).forEach(([dcKey, shipments]) => {
     shipments.forEach((ind) => {
       let shipmentMatched = false;
-      const skus = ind.children || ind.skus || [];
+      const skus = ind.children || [];
       skus.forEach((sku) => {
-        const id = sku.id || sku.material || "";
-        const desc = sku.desc || sku.materialDescription || "";
+        const id = sku.Material || sku.id || "";
+        const desc = sku.MaterialDescription || sku.desc || "";
         if (id.toLowerCase().includes(termLower) || desc.toLowerCase().includes(termLower)) {
           shipmentMatched = true;
           matchingDcs.add(dcKey);
@@ -173,8 +173,8 @@ export const computeMockSearchResults = (term) => {
               dcsCount: new Set(),
             };
           }
-          const alloc = (sku.ordQty || 0) + (sku.recCs || 0);
-          materialMap[id].allocated += alloc || (sku.recCs || 0) || 100;
+          const alloc = (Number(sku.ord_qty) || 0) + (parseFloat(sku.recQty) || 0);
+          materialMap[id].allocated += alloc;
           materialMap[id].shipmentsCount += 1;
           materialMap[id].dcsCount.add(dcKey);
         }

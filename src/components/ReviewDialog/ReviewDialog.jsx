@@ -20,27 +20,27 @@ function computeManifest(skus) {
 
   const rows = (skus || []).map((sku) => {
     const isAi = !!sku.fill;
-    const name = sku.desc || sku.materialDescription || sku.id;
-    const source = sku.source || "FACTORY";
-    const origCs = sku.ordCs != null ? sku.ordCs : sku.cs;
-    const recCs = sku.recCs != null ? sku.recCs : null;
-    const finalCs = (origCs || 0) + (recCs || 0);
-    const csWeight = sku.csWeight ?? (sku.grossWeight ? sku.grossWeight / 1000 : 0.05);
+    const name = sku.MaterialDescription || sku.Material;
+    const source = "FACTORY";
+    const origCs = Number(sku.cs) || Number(sku.ord_qty) || 0;
+    const recCs = parseFloat(sku.recQty) || 0;
+    const finalCs = origCs + recCs;
+    const csWeight = (parseFloat(sku.weight) || 4) / 1000;
     const weightKg = Math.round(finalCs * csWeight * 1000);
     const tonnage = parseFloat((finalCs * csWeight).toFixed(2));
 
     totalFinal += finalCs;
     totalWeight += weightKg;
     totalTonnage += tonnage;
-    totalAddedT += (recCs || 0) * csWeight;
+    totalAddedT += recCs * csWeight;
 
     return {
       cbu: name,
-      material: sku.id || sku.material,
+      material: sku.Material,
       source,
       tag: isAi ? "AI" : "ORIGINAL",
-      origQty: origCs != null ? origCs : "—",
-      recQty: recCs != null && recCs > 0 ? recCs : "—",
+      origQty: origCs > 0 ? origCs : "—",
+      recQty: recCs > 0 ? recCs : "—",
       final: finalCs,
       weight: weightKg,
       tonnage,
@@ -61,27 +61,29 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
   const { confirmAndDispatchPlan } = useAppContext();
   const [isDispatching, setIsDispatching] = useState(false);
 
-  const skus = useMemo(() => (ind ? ind.children || ind.skus || [] : []), [ind]);
+  const skus = useMemo(() => (ind ? ind.children || [] : []), [ind]);
 
   const manifestData = useMemo(() => computeManifest(skus), [skus]);
 
   const metrics = useMemo(() => {
-    if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0 };
+    if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0, loadCap: 99.0 };
 
-    const capacityT = parseFloat(ind.truckCapacity || ind.weight) || 14;
-    const baseUtilNum = parseFloat(ind.baseFinalUtil || ind.final_utilization || ind.utilFrom) || 92.36;
+    const capacityT = parseFloat(ind.weight) || 18.0;
+    const baseUtilNum = typeof ind.utilFrom === "number" ? (ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom) : (parseFloat(ind.utilFrom) || 88.0);
+    const loadCap = (skus[0]?.cap != null ? parseFloat(skus[0].cap) : null) || parseFloat(ind.loadabilityCap) || 99.0;
     const baseWeightT = (baseUtilNum / 100) * capacityT;
     const addedWeightT = manifestData.totalAddedT;
     const finalWeightT = baseWeightT + addedWeightT;
-    const finalUtil = parseFloat(ind.utilTo) || Math.round((baseUtilNum + (addedWeightT / capacityT) * 100) * 10) / 10;
+    const finalUtil = typeof ind.utilTo === "number" ? (ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo) : (parseFloat(ind.utilTo) || metrics?.finalUtil || 92.6);
 
     return {
       baseWeightT,
       addedWeightT,
       finalWeightT,
       finalUtil,
+      loadCap,
     };
-  }, [ind, manifestData]);
+  }, [ind, manifestData, skus]);
 
   if (!ind) return null;
 

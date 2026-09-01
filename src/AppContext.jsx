@@ -1,7 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
-import { fetchFilters } from "./api/filterApi";
+import { fetchFilters, fetchMinDate } from "./api/filterApi";
 import { fetchKPIs } from "./api/kpiApi";
 import { fetchChartTrends } from "./api/chartApi";
 import { fetchFactoryInventory } from "./api/factoryApi";
@@ -76,6 +76,60 @@ export const AppProvider = ({ children }) => {
     setOpenInds((p) => ({ ...p, [id]: !p[id] }));
   }, []);
 
+  // Normalizes shipment data based on permanent payload schema
+  const normalizeShipment = useCallback((raw) => {
+    const shipmentId = raw.shipmentId || raw.id;
+    const rawChildren = raw.children || [];
+    const capacityT = parseFloat(raw.weight) || (rawChildren[0] ? parseFloat(rawChildren[0].capacity) : 18.0);
+    const loadCap = rawChildren[0]?.cap != null ? parseFloat(rawChildren[0].cap) : 99.0;
+
+    const initialUtilNum = raw.utilFrom != null
+      ? (parseFloat(raw.utilFrom) <= 1 ? parseFloat(raw.utilFrom) * 100 : parseFloat(raw.utilFrom))
+      : (rawChildren[0] ? parseFloat(rawChildren[0].initial_utilization) * 100 : 88.0);
+
+    const baseFinalUtil = raw.utilTo != null
+      ? (parseFloat(raw.utilTo) <= 1 ? parseFloat(raw.utilTo) * 100 : parseFloat(raw.utilTo))
+      : (rawChildren[0] ? parseFloat(rawChildren[0].final_utilization) * 100 : 92.6);
+
+    const children = rawChildren.map((c) => {
+      const recQty = parseFloat(c.recQty) || 0;
+      const eligible = Number(c.eligible) || 0;
+      const ord_qty = Number(c.ord_qty) || 0;
+      const netweight = parseFloat(c.netweight) || 0;
+      const unitWeight = parseFloat(c.weight) || 4;
+      const csWeight = unitWeight / 1000;
+      const totalQty = ord_qty + recQty;
+      const totalT = (netweight + recQty * csWeight).toFixed(2);
+
+      return {
+        ...c,
+        recQty,
+        baseRecQty: recQty,
+        eligible,
+        maxElig: eligible + recQty,
+        csWeight,
+        total: `${totalQty.toLocaleString()} / ${totalT}T`,
+      };
+    });
+
+    const isOverUtilized = baseFinalUtil > loadCap;
+    const remainingCap = parseFloat((loadCap - baseFinalUtil).toFixed(1));
+
+    return {
+      ...raw,
+      id: shipmentId,
+      shipmentId,
+      truckCapacity: capacityT,
+      loadabilityCap: loadCap,
+      initialUtil: initialUtilNum,
+      baseFinalUtil,
+      finalUtilNum: baseFinalUtil,
+      isOverUtilized,
+      remainingCap,
+      children,
+    };
+  }, []);
+
   // API 2: Called only when the user expands a Receiving Plant (DC)
   const toggleDc = useCallback(async (plantId, dcId) => {
     const isCurrentlyOpen = !!openDcs[dcId];
@@ -87,15 +141,17 @@ export const AppProvider = ({ children }) => {
         setDcLoadingState((prev) => ({ ...prev, [cacheKey]: true }));
         setDcErrorState((prev) => ({ ...prev, [cacheKey]: null }));
         try {
+          const dateVal = filters?.date || filters?.startDate || currentStartDate || selectedDate || minDate || "";
           const data = await fetchShipmentDetails({
             sendingPlant: plantId,
             receivingPlant: dcId,
             CBU: filters?.CBU || [],
             class: filters?.class || "All",
-            fromDate: filters?.startDate || "",
-            toDate: filters?.endDate || "",
+            fromDate: filters?.startDate || dateVal,
+            toDate: filters?.endDate || dateVal,
           });
-          const shipments = Array.isArray(data) ? data : data.data || [];
+          const rawShipments = Array.isArray(data) ? data : data.data || [];
+          const shipments = rawShipments.map(normalizeShipment);
           setDcShipmentsCache((prev) => ({ ...prev, [cacheKey]: shipments }));
 
           // Auto-expand shipments when loaded
@@ -115,7 +171,7 @@ export const AppProvider = ({ children }) => {
         }
       }
     }
-  }, [openDcs, dcShipmentsCache, filters]);
+  }, [openDcs, dcShipmentsCache, filters, normalizeShipment, currentStartDate, selectedDate, minDate]);
 
   // Retry API 2 for a failed Receiving Plant
   const retryFetchDc = useCallback(async (plantId, dcId) => {
@@ -123,15 +179,17 @@ export const AppProvider = ({ children }) => {
     setDcLoadingState((prev) => ({ ...prev, [cacheKey]: true }));
     setDcErrorState((prev) => ({ ...prev, [cacheKey]: null }));
     try {
+      const dateVal = filters?.date || filters?.startDate || currentStartDate || selectedDate || minDate || "";
       const data = await fetchShipmentDetails({
         sendingPlant: plantId,
         receivingPlant: dcId,
         CBU: filters?.CBU || [],
         class: filters?.class || "All",
-        fromDate: filters?.startDate || "",
-        toDate: filters?.endDate || "",
+        fromDate: filters?.startDate || dateVal,
+        toDate: filters?.endDate || dateVal,
       });
-      const shipments = Array.isArray(data) ? data : data.data || [];
+      const rawShipments = Array.isArray(data) ? data : data.data || [];
+      const shipments = rawShipments.map(normalizeShipment);
       setDcShipmentsCache((prev) => ({ ...prev, [cacheKey]: shipments }));
 
       const initialOpenInds = {};
@@ -148,9 +206,9 @@ export const AppProvider = ({ children }) => {
     } finally {
       setDcLoadingState((prev) => ({ ...prev, [cacheKey]: false }));
     }
-  }, [filters]);
+  }, [filters, normalizeShipment, currentStartDate, selectedDate, minDate]);
 
-  // Live edit handler for SKU recommendation changes — highly optimized with minimal re-allocations
+  // Live edit handler for SKU recommendation changes
   const handleRecChange = useCallback((plantId, dcId, indId, skuIdx, val) => {
     const cacheKey = `${plantId}_${dcId}`;
     setDcShipmentsCache((prev) => {
@@ -159,65 +217,66 @@ export const AppProvider = ({ children }) => {
       if (indIndex === -1) return prev;
 
       const currentInd = currentList[indIndex];
-      const skusKey = currentInd.children ? "children" : "skus";
-      const skuList = currentInd[skusKey] || [];
+      const skuList = currentInd.children || [];
       if (!skuList[skuIdx]) return prev;
 
       const targetSku = skuList[skuIdx];
-      const maxPool = targetSku.maxElig != null ? targetSku.maxElig : ((targetSku.recCs || 0) + (targetSku.elig || 0));
+      const maxPool = targetSku.maxElig != null ? targetSku.maxElig : ((targetSku.recQty || 0) + (targetSku.eligible || 0));
       const numVal = isNaN(Number(val)) ? 0 : Number(val);
       const clampedVal = Math.max(0, Math.min(numVal, maxPool));
       const newElig = maxPool - clampedVal;
 
-      if (targetSku.recCs === clampedVal && targetSku.elig === newElig) {
+      if (targetSku.recQty === clampedVal && targetSku.eligible === newElig) {
         return prev;
       }
 
       const updatedSkus = skuList.map((s, i) => {
         if (i !== skuIdx) return s;
-        const totalQty = (s.ordQty != null ? s.ordQty : 0) + clampedVal;
-        const totalT = ((s.ordT != null ? s.ordT : 0) + clampedVal * (s.csWeight || 0)).toFixed(2);
+        const ord_qty = Number(s.ord_qty) || 0;
+        const netweight = parseFloat(s.netweight) || 0;
+        const csWeight = s.csWeight || ((parseFloat(s.weight) || 4) / 1000);
+        const totalQty = ord_qty + clampedVal;
+        const totalT = (netweight + clampedVal * csWeight).toFixed(2);
         return {
           ...s,
           maxElig: maxPool,
-          recCs: clampedVal,
-          elig: newElig,
-          total: `${totalQty} / ${totalT}T`,
+          recQty: clampedVal,
+          eligible: newElig,
+          total: `${totalQty.toLocaleString()} / ${totalT}T`,
         };
       });
 
-      // Recalculate shipment-level utilization
-      const capacityT = parseFloat(currentInd.truckCapacity || currentInd.weight) || 14;
-      const baseUtilNum = parseFloat(currentInd.baseFinalUtil || currentInd.final_utilization || currentInd.utilFrom) || 92.36;
-      const loadCap = currentInd.loadabilityCap != null ? parseFloat(currentInd.loadabilityCap) : 99.0;
+      const capacityT = parseFloat(currentInd.weight) || 18;
+      const baseFinalUtil = parseFloat(currentInd.baseFinalUtil) || 92.6;
+      const loadCap = parseFloat(currentInd.loadabilityCap) || 99.0;
       
-      const addedWeightT = updatedSkus.reduce(
-        (sum, s) => sum + (s.recCs || 0) * (s.csWeight || 0.05),
+      const baseRecWeightT = skuList.reduce(
+        (sum, s) => sum + (s.baseRecQty || 0) * (s.csWeight || 0.004),
         0
       );
-      const addedUtilPercent = (addedWeightT / capacityT) * 100;
-      const finalUtilNum = parseFloat((baseUtilNum + addedUtilPercent).toFixed(1));
-      const isOverUtilized = finalUtilNum > 100;
+      const currentRecWeightT = updatedSkus.reduce(
+        (sum, s) => sum + (s.recQty || 0) * (s.csWeight || 0.004),
+        0
+      );
+      const deltaWeightT = currentRecWeightT - baseRecWeightT;
+      const deltaUtil = (deltaWeightT / capacityT) * 100;
+      const finalUtilNum = parseFloat((baseFinalUtil + deltaUtil).toFixed(1));
+      const isOverUtilized = finalUtilNum > loadCap;
       const remainingCap = parseFloat((loadCap - finalUtilNum).toFixed(1));
-
-      const newUtilTo = `${finalUtilNum.toFixed(1)}%`;
-      const newLabel = `${currentInd.weight || `${capacityT}T`} · ${currentInd.utilFrom} → ${newUtilTo}`;
 
       const updatedInd = {
         ...currentInd,
-        utilTo: newUtilTo,
+        utilTo: finalUtilNum <= 1 ? finalUtilNum : finalUtilNum / 100,
         finalUtilNum,
         isOverUtilized,
         remainingCap,
-        addedWeightT,
-        label: newLabel,
-        [skusKey]: updatedSkus,
+        addedWeightT: currentRecWeightT,
+        children: updatedSkus,
       };
 
       const updatedList = [...currentList];
       updatedList[indIndex] = updatedInd;
 
-      // Sync reviewInd if this shipment is currently open in review
       setReviewInd((currentReview) =>
         currentReview && currentReview.id === indId ? updatedInd : currentReview
       );
@@ -226,67 +285,96 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
-  // Confirm & Dispatch Action (Calls Update API with manifest array & summary)
-  const confirmAndDispatchPlan = useCallback(async (shipmentId, manifestPayload, summaryPayload) => {
+  // Update a shipment's status
+  const updateShipmentStatus = useCallback((plantId, dcId, indId, newStatus) => {
+    const cacheKey = `${plantId}_${dcId}`;
+    setDcShipmentsCache((prev) => {
+      const currentList = prev[cacheKey] || [];
+      const indIndex = currentList.findIndex((ind) => ind.id === indId);
+      if (indIndex === -1) return prev;
+
+      const updatedList = [...currentList];
+      updatedList[indIndex] = {
+        ...updatedList[indIndex],
+        status: newStatus,
+      };
+      return { ...prev, [cacheKey]: updatedList };
+    });
+  }, []);
+
+  // API 3: Confirm and Dispatch shipment plan
+  const confirmAndDispatchPlan = useCallback(async (ind, customManifest) => {
     try {
-      const response = await updateShipmentPlan({
-        shipmentId,
-        manifest: manifestPayload,
-        summary: summaryPayload,
-      });
+      const payload = {
+        shipmentId: ind.id,
+        status: "Accepted",
+        manifest: customManifest || ind.children || [],
+        finalUtil: ind.utilTo,
+      };
 
-      // Update shipment status in cache
-      setDcShipmentsCache((prev) => {
-        const next = { ...prev };
-        Object.keys(next).forEach((key) => {
-          next[key] = next[key].map((ind) => {
-            if (ind.id !== shipmentId) return ind;
-            return {
-              ...ind,
-              status: "ACCEPTED",
-            };
-          });
-        });
-        return next;
-      });
-
-      showToast(`Shipment ${shipmentId} plan successfully updated and dispatched!`, "success");
-      return response;
+      const result = await updateShipmentPlan(payload);
+      if (result.success !== false) {
+        showToast(`Shipment ${ind.id} successfully confirmed & dispatched!`, "success");
+        setReviewInd(null);
+        return true;
+      } else {
+        showToast(result.message || "Failed to update shipment plan", "error");
+        return false;
+      }
     } catch (err) {
-      console.error("Error updating shipment plan:", err);
-      showToast(`Failed to update shipment ${shipmentId}: ${err.message}`, "error");
-      throw err;
+      console.error("API 3 confirmAndDispatchPlan error:", err);
+      showToast(err.message || "Error confirming shipment plan", "error");
+      return false;
     }
   }, [showToast]);
 
-  // Immediate Search Trigger for CBU Dropdown Selection
-  const triggerCbuSearch = useCallback(async (cbuCode) => {
+  // Live Auto-Search & Debounce across plant hierarchy and materials
+  const triggerCbuSearch = useCallback((cbuCode) => {
     const term = (cbuCode || "").trim();
     setShipmentSearch(term);
     setDebouncedSearchTerm(term);
-    if (!term) {
+  }, []);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchTerm(shipmentSearch);
+    }, 250);
+    return () => clearTimeout(handler);
+  }, [shipmentSearch]);
+
+  useEffect(() => {
+    if (!debouncedSearchTerm || debouncedSearchTerm.trim().length < 2) {
       setSearchResultsData(null);
       setIsSearchLoading(false);
       return;
     }
-    setIsSearchLoading(true);
-    try {
-      const results = await searchShipmentsApi(term, {
-        CBU: filters?.CBU || [],
-        class: filters?.class || "All",
-        fromDate: filters?.startDate || "",
-        toDate: filters?.endDate || "",
-      });
-      setSearchResultsData(results);
-    } catch (err) {
-      console.error("Search API error:", err);
-    } finally {
-      setIsSearchLoading(false);
-    }
-  }, [filters]);
 
-  // Search filter logic for Shipment Workspace: expand matching nodes
-  const searchTerm = debouncedSearchTerm;
+    let isMounted = true;
+    const performSearch = async () => {
+      setIsSearchLoading(true);
+      try {
+        const results = await searchShipmentsApi(debouncedSearchTerm, {
+          sendingPlant: filters?.["Source Plan"] || [],
+          receivingPlant: filters?.["DC"] || [],
+          CBU: filters?.["CBU"] || [],
+        });
+        if (isMounted) {
+          setSearchResultsData(results);
+        }
+      } catch (err) {
+        console.error("Search API failed, will fallback to local traversal:", err);
+        if (isMounted) setSearchResultsData(null);
+      } finally {
+        if (isMounted) setIsSearchLoading(false);
+      }
+    };
+
+    performSearch();
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedSearchTerm, filters]);
+
   useEffect(() => {
     if (!debouncedSearchTerm || plantsData.length === 0) return;
     const newPlants = {}, newDcs = {}, newInds = {};
@@ -299,10 +387,10 @@ export const AppProvider = ({ children }) => {
         const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
         let dcMatch = false;
         shipments.forEach((ind) => {
-          const skus = ind.children || ind.skus || [];
+          const skus = ind.children || [];
           const match = skus.some((s) => {
-            const id = s.id || s.material || "";
-            const desc = s.desc || s.materialDescription || "";
+            const id = s.Material || s.id || "";
+            const desc = s.MaterialDescription || s.desc || "";
             return (
               id.toLowerCase().includes(termLower) ||
               desc.toLowerCase().includes(termLower)
@@ -323,9 +411,17 @@ export const AppProvider = ({ children }) => {
     setOpenInds((p) => ({ ...p, ...newInds }));
   }, [debouncedSearchTerm, plantsData, dcShipmentsCache]);
 
-  // Cascading Filter Handler: Fetches updated filter definitions and re-queries dashboard APIs
   const applyFilters = useCallback(async (newFilters) => {
     setFilters(newFilters);
+    const dateVal = newFilters.date || newFilters.startDate || currentStartDate || selectedDate || minDate || "2026-08-01";
+    const payload = {
+      ...newFilters,
+      date: dateVal,
+      startDate: newFilters.startDate || dateVal,
+      endDate: newFilters.endDate || dateVal,
+      fromDate: newFilters.startDate || dateVal,
+      toDate: newFilters.endDate || dateVal,
+    };
     try {
       const [
         filtersRes,
@@ -334,11 +430,11 @@ export const AppProvider = ({ children }) => {
         factoryRes,
         plantsRes,
       ] = await Promise.all([
-        fetchFilters(newFilters),
-        fetchKPIs(newFilters),
-        fetchChartTrends(newFilters),
-        fetchFactoryInventory(newFilters),
-        fetchPlantHierarchy(newFilters),
+        fetchFilters(payload),
+        fetchKPIs(payload),
+        fetchChartTrends(payload),
+        fetchFactoryInventory(payload),
+        fetchPlantHierarchy(payload),
       ]);
 
       if (filtersRes && filtersRes.filterDefs) {
@@ -347,18 +443,14 @@ export const AppProvider = ({ children }) => {
       if (kpiRes) setKpiData(kpiRes);
       if (chartsRes) setChartsData(chartsRes);
       if (factoryRes) {
-        const factoriesList = Array.isArray(factoryRes)
-          ? factoryRes
-          : factoryRes.data || factoryRes.initFactories || [];
+        const factoriesList = Array.isArray(factoryRes) ? factoryRes : factoryRes.data || factoryRes.initFactories || [];
         setFactories(factoriesList);
         if (factoryRes.initFactoryDetails) {
           setFactoryDetails(factoryRes.initFactoryDetails);
         } else {
           const detailsMap = {};
           factoriesList.forEach((f) => {
-            if (f.name && f.children) {
-              detailsMap[f.name] = f.children;
-            }
+            if (f.name && f.children) detailsMap[f.name] = f.children;
           });
           setFactoryDetails(detailsMap);
         }
@@ -369,12 +461,26 @@ export const AppProvider = ({ children }) => {
     } catch (error) {
       console.error("Failed to apply cascading filters across dashboard:", error);
     }
-  }, []);
+  }, [currentStartDate, selectedDate, minDate]);
 
-  // Initial Load: API 1 — Sending Plant → Receiving Plant
   useEffect(() => {
     const loadAllData = async () => {
       try {
+        setIsLoading(true);
+        const initialMinDate = await fetchMinDate();
+        const defaultDateVal = initialMinDate || "2026-08-01";
+
+        const initialPayload = {
+          "Source Plan": [],
+          DC: [],
+          CBU: [],
+          date: defaultDateVal,
+          startDate: defaultDateVal,
+          endDate: defaultDateVal,
+          fromDate: defaultDateVal,
+          toDate: defaultDateVal,
+        };
+
         const [
           filtersRes,
           kpiRes,
@@ -382,41 +488,43 @@ export const AppProvider = ({ children }) => {
           factoryRes,
           plantsRes,
         ] = await Promise.all([
-          fetchFilters(),
-          fetchKPIs(),
-          fetchChartTrends(),
-          fetchFactoryInventory(),
-          fetchPlantHierarchy(),
+          fetchFilters(initialPayload),
+          fetchKPIs(initialPayload),
+          fetchChartTrends(initialPayload),
+          fetchFactoryInventory(initialPayload),
+          fetchPlantHierarchy(initialPayload),
         ]);
 
-        setFilters(filtersRes.initFilters);
-        setFilterDefs(filtersRes.filterDefs);
-        setMinDate(filtersRes.minDate || null);
-        setMaxDate(filtersRes.maxDate || null);
-        setSelectedDate(filtersRes.date || filtersRes.currentStartDate || "2026-08-01");
-        setCurrentStartDate(filtersRes.currentStartDate || filtersRes.initFilters?.startDate || null);
-        setCurrentEndDate(filtersRes.currentEndDate || filtersRes.initFilters?.endDate || null);
+        const resolvedMinDate = initialMinDate || filtersRes?.minDate || defaultDateVal;
+        setMinDate(resolvedMinDate);
+        setMaxDate(filtersRes?.maxDate || null);
+        setSelectedDate(defaultDateVal);
+        setCurrentStartDate(defaultDateVal);
+        setCurrentEndDate(defaultDateVal);
+
+        setFilters({
+          ...(filtersRes?.initFilters || {}),
+          date: defaultDateVal,
+          startDate: defaultDateVal,
+          endDate: defaultDateVal,
+        });
+        setFilterDefs(filtersRes?.filterDefs);
         setKpiData(kpiRes);
         setChartsData(chartsRes);
         
         if (factoryRes) {
-          const factoriesList = Array.isArray(factoryRes)
-            ? factoryRes
-            : factoryRes.data || factoryRes.initFactories || [];
+          const factoriesList = Array.isArray(factoryRes) ? factoryRes : factoryRes.data || factoryRes.initFactories || [];
           setFactories(factoriesList);
           if (factoryRes.initFactoryDetails) {
             setFactoryDetails(factoryRes.initFactoryDetails);
           } else {
             const detailsMap = {};
             factoriesList.forEach((f) => {
-              if (f.name && f.children) {
-                detailsMap[f.name] = f.children;
-              }
+              if (f.name && f.children) detailsMap[f.name] = f.children;
             });
             setFactoryDetails(detailsMap);
           }
         }
-
         setPlantsData(Array.isArray(plantsRes) ? plantsRes : plantsRes.data || []);
       } catch (error) {
         console.error("Failed to load application data:", error);
@@ -424,14 +532,11 @@ export const AppProvider = ({ children }) => {
         setIsLoading(false);
       }
     };
-
     loadAllData();
   }, []);
 
   const value = useMemo(() => ({
     isLoading,
-
-    // Data
     kpiData,
     chartsData,
     factories,
@@ -486,7 +591,8 @@ export const AppProvider = ({ children }) => {
     handleRecChange,
     confirmAndDispatchPlan,
     showToast,
-    searchTerm,
+    searchTerm: shipmentSearch,
+    setSearchTerm: setShipmentSearch,
   }), [
     isLoading,
     kpiData,
@@ -525,7 +631,6 @@ export const AppProvider = ({ children }) => {
     handleRecChange,
     confirmAndDispatchPlan,
     showToast,
-    searchTerm,
   ]);
 
   if (isLoading) {
