@@ -12,31 +12,85 @@ const AppContext = createContext();
 
 export const useAppContext = () => useContext(AppContext);
 
+// Clean string helper for plant/factory matching
+function cleanEntityKey(str) {
+  return String(str || "")
+    .toLowerCase()
+    .replace(/plant/gi, "")
+    .replace(/u\d+/gi, "")
+    .replace(/[^a-z0-9]/gi, "")
+    .trim();
+}
+
 // Helper: Normalize plant name or id to match factory inventory key
 function resolveFactoryName(plantIdOrName, plantsList = [], factoriesList = []) {
   if (!plantIdOrName) return "";
   const query = String(plantIdOrName).toLowerCase().trim();
+  const queryBase = cleanEntityKey(query);
+
   const plantObj = (plantsList || []).find(
-    (p) => (p.id && p.id.toLowerCase() === query) || (p.name && p.name.toLowerCase().trim() === query)
+    (p) =>
+      (p.id && p.id.toLowerCase() === query) ||
+      (p.name && p.name.toLowerCase().trim() === query) ||
+      (p.id && cleanEntityKey(p.id) === queryBase) ||
+      (p.name && cleanEntityKey(p.name) === queryBase)
   );
   const candidateName = (plantObj ? plantObj.name : plantIdOrName).toLowerCase().trim();
+  const candidateBase = cleanEntityKey(candidateName);
 
   const matched = (factoriesList || []).find((f) => {
     if (!f.name) return false;
     const fn = f.name.toLowerCase().trim();
-    return fn === candidateName || fn.includes(candidateName) || candidateName.includes(fn.replace(/plant/i, "").trim());
+    const fnBase = cleanEntityKey(fn);
+    return (
+      fn === candidateName ||
+      fn.includes(candidateName) ||
+      candidateName.includes(fn) ||
+      (candidateBase && (fnBase === candidateBase || fnBase.includes(candidateBase) || candidateBase.includes(fnBase)))
+    );
   });
 
   return matched ? matched.name : (plantObj ? plantObj.name : plantIdOrName);
 }
 
-// Helper: Look up material from global eligible map by code or description
+// Helper: Get factory material map from global eligible state by name, id, or normalized key
+function getFactoryEligibleMap(factoryKey, eligibleMap) {
+  if (!factoryKey || !eligibleMap) return null;
+  if (eligibleMap[factoryKey]) return eligibleMap[factoryKey];
+
+  const targetBase = cleanEntityKey(factoryKey);
+  for (const k of Object.keys(eligibleMap)) {
+    const kBase = cleanEntityKey(k);
+    if (kBase && (kBase === targetBase || kBase.includes(targetBase) || targetBase.includes(kBase))) {
+      return eligibleMap[k];
+    }
+  }
+  return null;
+}
+
+// Helper: Look up material from global eligible map by code, id, or description
 function lookupMaterialRecord(factoryName, sku, eligibleMap) {
-  if (!factoryName || !eligibleMap || !eligibleMap[factoryName]) return null;
-  const fMap = eligibleMap[factoryName];
-  const codeKey = (sku.Material || sku.code || sku.id || "").toUpperCase().trim();
+  const fMap = getFactoryEligibleMap(factoryName, eligibleMap);
+  if (!fMap) return null;
+  const codeKey = (sku.Material || sku.code || sku.id || sku.cbu || sku.sku || "").toUpperCase().trim();
   const descKey = (sku.MaterialDescription || sku.desc || sku.name || "").toUpperCase().trim();
-  return (codeKey && fMap[codeKey]) || (descKey && fMap[descKey]) || null;
+
+  if (codeKey && fMap[codeKey]) return fMap[codeKey];
+  if (descKey && fMap[descKey]) return fMap[descKey];
+
+  // Fuzzy match within this factory's materials
+  for (const mKey of Object.keys(fMap)) {
+    const rec = fMap[mKey];
+    const recCode = (rec.code || "").toUpperCase().trim();
+    const recName = (rec.name || "").toUpperCase().trim();
+    if (codeKey && recCode && (recCode === codeKey || recCode.includes(codeKey) || codeKey.includes(recCode))) {
+      return rec;
+    }
+    if (descKey && recName && (recName === descKey || recName.includes(descKey) || descKey.includes(recName))) {
+      return rec;
+    }
+  }
+  return null;
 }
 
 // Helper: Construct global eligible map from factory inventory response
@@ -112,7 +166,9 @@ function normalizeShipment(raw, factoryName = "", eligibleMap = null) {
   const children = rawChildren.map((c) => {
     const recQty = parseFloat(c.recQty) || 0;
     const record = lookupMaterialRecord(factoryName, c, eligibleMap);
-    const eligible = record ? record.currentEligible : (Number(c.eligible) || 0);
+    // CRITICAL: NEVER take eligible from shipment response (c.eligible).
+    // It MUST strictly come from the centralized factory inventory record!
+    const eligible = record ? record.currentEligible : 0;
     const csWeight = (parseFloat(c.weight) || 4) / 1000;
     const ordQty = Number(c.ord_qty) || 0;
     const netweight = parseFloat(c.netweight) || 0;
@@ -273,17 +329,16 @@ export const AppProvider = ({ children }) => {
       const targetSku = currentInd.children?.[skuIdx];
       if (!targetSku) return prev;
 
-      const codeKey = (targetSku.Material || targetSku.id || targetSku.code || "").toUpperCase().trim();
+      const codeKey = (targetSku.Material || targetSku.id || targetSku.code || targetSku.cbu || targetSku.sku || "").toUpperCase().trim();
       const descKey = (targetSku.MaterialDescription || targetSku.desc || targetSku.name || "").toUpperCase().trim();
       const isMatch = (s) => {
-        const sCode = (s.Material || s.id || s.code || "").toUpperCase().trim();
+        const sCode = (s.Material || s.id || s.code || s.cbu || s.sku || "").toUpperCase().trim();
         const sDesc = (s.MaterialDescription || s.desc || s.name || "").toUpperCase().trim();
         return (codeKey && sCode === codeKey) || (descKey && sDesc === descKey);
       };
 
-      const fMap = globalEligibleRef.current[resolvedFactoryName] || {};
-      const matRecord = (codeKey && fMap[codeKey]) || (descKey && fMap[descKey]);
-      const initialElig = matRecord?.initialEligible ?? (targetSku.maxElig != null ? targetSku.maxElig : (targetSku.recQty || 0) + (targetSku.eligible || 0));
+      const matRecord = lookupMaterialRecord(resolvedFactoryName, targetSku, globalEligibleRef.current);
+      const initialElig = matRecord ? matRecord.initialEligible : 0;
 
       // Sum consumed recQty across other shipments under this plant for the same material
       let otherConsumedRec = 0;
@@ -310,43 +365,49 @@ export const AppProvider = ({ children }) => {
       // 1. Update global eligible map
       if (matRecord) {
         matRecord.currentEligible = newRemainingEligible;
-      } else {
-        const record = {
-          factoryName: resolvedFactoryName,
-          code: targetSku.Material,
-          name: targetSku.MaterialDescription,
-          initialEligible: initialElig,
-          currentEligible: newRemainingEligible,
-          stock: 0,
-        };
-        if (!globalEligibleRef.current[resolvedFactoryName]) globalEligibleRef.current[resolvedFactoryName] = {};
-        if (codeKey) globalEligibleRef.current[resolvedFactoryName][codeKey] = record;
-        if (descKey && !globalEligibleRef.current[resolvedFactoryName][descKey]) globalEligibleRef.current[resolvedFactoryName][descKey] = record;
       }
       setGlobalEligibleState({ ...globalEligibleRef.current });
 
-      // 2. Synchronize Factory Inventory table state
+      // 2. Remove consumed quantity from Factory Inventory table state ("the above table")
       setFactories((prevF) =>
-        (prevF || []).map((f) =>
-          f.name !== resolvedFactoryName
-            ? f
-            : {
-                ...f,
-                children: (f.children || []).map((m) =>
-                  isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
-                ),
-              }
-        )
+        (prevF || []).map((f) => {
+          const fn = f.name;
+          const cleanFn = cleanEntityKey(fn);
+          const cleanTarget = cleanEntityKey(resolvedFactoryName);
+          const isTargetFactory =
+            fn === resolvedFactoryName ||
+            cleanFn === cleanTarget ||
+            (cleanFn && cleanTarget && (cleanFn.includes(cleanTarget) || cleanTarget.includes(cleanFn)));
+          if (!isTargetFactory) return f;
+
+          const updatedChildren = (f.children || []).map((m) =>
+            isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
+          );
+          const newFactoryEligible = updatedChildren.reduce(
+            (sum, c) => sum + (typeof c.eligible === "number" ? c.eligible : parseFloat(c.eligible) || 0),
+            0
+          );
+          return {
+            ...f,
+            eligible: newFactoryEligible,
+            children: updatedChildren,
+          };
+        })
       );
 
       setFactoryDetails((prevD) => {
-        if (!prevD?.[resolvedFactoryName]) return prevD;
-        return {
-          ...prevD,
-          [resolvedFactoryName]: prevD[resolvedFactoryName].map((m) =>
-            isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
-          ),
-        };
+        if (!prevD) return prevD;
+        const cleanTarget = cleanEntityKey(resolvedFactoryName);
+        const updatedD = { ...prevD };
+        Object.keys(updatedD).forEach((k) => {
+          const kClean = cleanEntityKey(k);
+          if (k === resolvedFactoryName || kClean === cleanTarget) {
+            updatedD[k] = updatedD[k].map((m) =>
+              isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
+            );
+          }
+        });
+        return updatedD;
       });
 
       // 3. Synchronize all shipments under this plant in dcShipmentsCache
