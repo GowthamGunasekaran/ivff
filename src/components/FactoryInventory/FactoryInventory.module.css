@@ -44,6 +44,18 @@
   border-radius: 4px;
 }
 
+.moreBtn {
+  margin-left: auto;
+  padding: 2px !important;
+  color: #5a6072 !important;
+  border-radius: 4px !important;
+}
+
+.moreBtn:hover {
+  background-color: #f0f3fa !important;
+  color: #2c4cd3 !important;
+}
+
 .statsRow {
   display: flex;
   gap: 12px;

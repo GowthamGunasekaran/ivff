@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment, useMemo } from "react";
 import { useAppContext } from "../../AppContext";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -7,6 +7,8 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
+import Tooltip from "@mui/material/Tooltip";
+import MoreVertIcon from "@mui/icons-material/MoreVert";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import styles from "./FactoryInventory.module.css";
@@ -19,6 +21,15 @@ const parseNum = (val) => {
     return parseFloat(clean) * 1000;
   }
   return parseFloat(clean) || 0;
+};
+
+const formatDisplay = (num) => {
+  if (num == null || isNaN(num)) return "0";
+  if (num >= 1000) {
+    const kVal = (num / 1000).toFixed(1).replace(/\.0$/, "");
+    return `${kVal}K`;
+  }
+  return num.toLocaleString();
 };
 
 function FactoryRow({ row, expanded, onToggle }) {
@@ -51,13 +62,13 @@ function FactoryRow({ row, expanded, onToggle }) {
         align="right"
         sx={{ p: "6px 4px", border: "none", fontSize: 11, color: "#5a6072", width: 54 }}
       >
-        {row.stock}
+        {row.displayStock || row.stock}
       </TableCell>
       <TableCell
         align="right"
         sx={{ p: "6px 12px 6px 4px", border: "none", fontSize: 11, fontWeight: 700, color: "#2e9e5b", width: 58 }}
       >
-        {row.eligible}
+        {row.displayEligible || row.eligible}
       </TableCell>
     </TableRow>
   );
@@ -101,6 +112,86 @@ export default function FactoryInventory() {
       ? filters.CBU[0]
       : "U918";
 
+  // Dynamically calculate stock and eligible sums for all materials and plants
+  const { factoriesList, displayTotalStock, displayTotalEligible } = useMemo(() => {
+    let totalStock = 0;
+    let totalEligible = 0;
+
+    const list = (factories || []).map((row) => {
+      const details = row.children || (factoryDetails && factoryDetails[row.name]) || [];
+      let plantStock = 0;
+      let plantEligible = 0;
+
+      if (details.length > 0) {
+        details.forEach((d) => {
+          plantStock += parseNum(d.avail || d.stock);
+          plantEligible += parseNum(d.eligible);
+        });
+      } else {
+        plantStock = parseNum(row.stock);
+        plantEligible = parseNum(row.eligible);
+      }
+
+      totalStock += plantStock;
+      totalEligible += plantEligible;
+
+      return {
+        ...row,
+        details,
+        computedStock: plantStock,
+        computedEligible: plantEligible,
+        displayStock: formatDisplay(plantStock),
+        displayEligible: formatDisplay(plantEligible),
+      };
+    });
+
+    return {
+      factoriesList: list,
+      totalStock,
+      totalEligible,
+      displayTotalStock: formatDisplay(totalStock),
+      displayTotalEligible: formatDisplay(totalEligible),
+    };
+  }, [factories, factoryDetails]);
+
+  // Download entire Factory Inventory as a single consolidated CSV file
+  const handleDownloadCsv = () => {
+    const headers = ["Factory Name", "Material Code", "Material Description", "Available Stock", "Eligible Quantity"];
+    const rows = [];
+
+    factoriesList.forEach((row) => {
+      const details = row.details || [];
+      if (details.length > 0) {
+        details.forEach((d) => {
+          rows.push([
+            `"${(row.name || "").replace(/"/g, '""')}"`,
+            `"${(d.code || d.sku || d.location || "").replace(/"/g, '""')}"`,
+            `"${(d.name || d.material || "").replace(/"/g, '""')}"`,
+            `"${parseNum(d.avail || d.stock)}"`,
+            `"${parseNum(d.eligible)}"`,
+          ]);
+        });
+      } else {
+        rows.push([
+          `"${(row.name || "").replace(/"/g, '""')}"`,
+          `"${(row.code || "").replace(/"/g, '""')}"`,
+          `"—"`,
+          `"${parseNum(row.stock)}"`,
+          `"${parseNum(row.eligible)}"`,
+        ]);
+      }
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `factory_inventory_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className={styles.container}>
       {/* Header */}
@@ -108,13 +199,18 @@ export default function FactoryInventory() {
         <div className={styles.titleRow}>
           <span className={styles.title}>Factory Inventory</span>
           <span className={styles.badge}>{cbuBadge}</span>
+          <Tooltip title="Export Factory Inventory as CSV" arrow placement="top">
+            <IconButton size="small" className={styles.moreBtn} onClick={handleDownloadCsv}>
+              <MoreVertIcon sx={{ fontSize: 16 }} />
+            </IconButton>
+          </Tooltip>
         </div>
         <div className={styles.statsRow}>
           <span className={styles.statText}>
-            Total Stock <strong style={{ color: "#1f2430", fontWeight: 700 }}>103K</strong>
+            Total Stock <strong style={{ color: "#1f2430", fontWeight: 700 }}>{displayTotalStock}</strong>
           </span>
           <span className={styles.statText}>
-            Eligible <strong style={{ color: "#2c4cd3", fontWeight: 700 }}>17.3K</strong>
+            Eligible <strong style={{ color: "#2c4cd3", fontWeight: 700 }}>{displayTotalEligible}</strong>
           </span>
         </div>
       </div>
@@ -137,8 +233,8 @@ export default function FactoryInventory() {
           </TableHead>
 
           <TableBody>
-            {(factories || []).map((row) => {
-              const details = row.children || (factoryDetails && factoryDetails[row.name]) || [];
+            {factoriesList.map((row) => {
+              const details = row.details || [];
               const isExpanded = !!factoryExpanded[row.name];
               return (
                 <Fragment key={row.name}>
@@ -184,10 +280,10 @@ export default function FactoryInventory() {
                 TOTAL
               </TableCell>
               <TableCell align="right" sx={{ p: "6px 4px", border: "none", fontWeight: 700, fontSize: 11, color: "#1f2430", width: 54 }}>
-                103K
+                {displayTotalStock}
               </TableCell>
               <TableCell align="right" sx={{ p: "6px 12px 6px 4px", border: "none", fontWeight: 700, fontSize: 11, color: "#1f2430", width: 58 }}>
-                17.3K
+                {displayTotalEligible}
               </TableCell>
             </TableRow>
           </TableBody>

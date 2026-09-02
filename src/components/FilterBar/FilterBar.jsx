@@ -101,9 +101,11 @@ export default function FilterBar() {
 
   return (
     <div className={styles.filterBar}>
-      {/* Searchable multi-select dropdowns: Source Plan, DC, CBU */}
-      {filterDefs.map((f) => {
-        const currentVal = Array.isArray(filters[f.label])
+      {/* Searchable multi-select dropdowns: Source Plan, DC (CBU is handled via search) */}
+      {filterDefs
+        .filter((f) => f.label !== "CBU")
+        .map((f) => {
+          const currentVal = Array.isArray(filters[f.label])
           ? filters[f.label]
           : filters[f.label]
           ? [filters[f.label]]
