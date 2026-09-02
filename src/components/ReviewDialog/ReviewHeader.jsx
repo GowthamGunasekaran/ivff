@@ -6,7 +6,7 @@ export default function ReviewHeader({ ind, dcLabel, onClose, metrics }) {
   const currentUtil = ind.utilFrom || "73.7%";
   const finalUtil = ind.utilTo || `${metrics.finalUtil.toFixed(1)}%`;
   const utilGainVal = Math.max(0, parseFloat(finalUtil) - parseFloat(currentUtil));
-  const isHighRisk = parseFloat(finalUtil) >= 90;
+  const isHighRisk = parseFloat(finalUtil) > 100.0;
   const capacityT = ind.weight || `${metrics.capacityT || 10}T`;
 
   const kpis = [

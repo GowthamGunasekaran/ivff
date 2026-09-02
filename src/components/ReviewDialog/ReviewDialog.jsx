@@ -66,11 +66,11 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
   const manifestData = useMemo(() => computeManifest(skus), [skus]);
 
   const metrics = useMemo(() => {
-    if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0, loadCap: 99.0 };
+    if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0, loadCap: 100.0 };
 
     const capacityT = parseFloat(ind.weight) || 18.0;
     const baseUtilNum = typeof ind.utilFrom === "number" ? (ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom) : (parseFloat(ind.utilFrom) || 88.0);
-    const loadCap = (skus[0]?.cap != null ? parseFloat(skus[0].cap) : null) || parseFloat(ind.loadabilityCap) || 99.0;
+    const loadCap = 100.0; // Static 100% capacity cap
     const baseWeightT = (baseUtilNum / 100) * capacityT;
     const addedWeightT = manifestData.totalAddedT;
     const finalWeightT = baseWeightT + addedWeightT;
@@ -88,6 +88,7 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
   if (!ind) return null;
 
   const handleConfirmDispatch = async () => {
+    if (metrics.finalUtil > 100.0) return;
     setIsDispatching(true);
 
     const manifestPayload = manifestData.rows.map((row) => ({
@@ -159,8 +160,15 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
         <button
           className={styles.btnConfirm}
           onClick={handleConfirmDispatch}
-          disabled={isDispatching}
-          style={{ display: "flex", alignItems: "center", gap: 6 }}
+          disabled={isDispatching || metrics.finalUtil > 100.0}
+          title={metrics.finalUtil > 100.0 ? "Cannot dispatch: Final utilization exceeds 100%" : ""}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+            opacity: metrics.finalUtil > 100.0 ? 0.5 : 1,
+            cursor: metrics.finalUtil > 100.0 ? "not-allowed" : "pointer",
+          }}
         >
           {isDispatching && <CircularProgress size={14} sx={{ color: "white" }} />}
           {isDispatching ? "Dispatching..." : "Confirm & Dispatch"}

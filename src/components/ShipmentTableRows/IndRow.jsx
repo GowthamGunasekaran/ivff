@@ -18,7 +18,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const skus = ind.children || [];
   const priority = skus[0]?.Shipment_Priority || ind.priority || "Medium";
   const status = skus[0]?.status || ind.status || "Accepted";
-  const cap = skus[0]?.cap != null ? parseFloat(skus[0].cap) : 99.0;
+  const cap = 100.0; // Static 100% capacity cap
 
   const priorityClass =
     priority === "High"
@@ -41,10 +41,10 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
     ? ind.finalUtilNum
     : (typeof ind.utilTo === "number" ? (ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo) : parseFloat(ind.utilTo) || initialUtilNum);
 
-  const isOverUtilized = finalUtilNum > cap;
+  const isOverUtilized = finalUtilNum > 100.0;
   const utilFromFormatted = `${initialUtilNum.toFixed(1)}%`;
   const utilToFormatted = `${finalUtilNum.toFixed(1)}%`;
-  const tooltipMessage = `The utilization should be ${cap}%, it should not be beyond ${cap}%`;
+  const tooltipMessage = "The utilization should be 100%, it should not be beyond 100%";
 
   const totalSumQty = totalOrdQty + totalRecCs;
   const totalSumT = (totalNetWeight + parseFloat(totalRecT || 0)).toFixed(2);
