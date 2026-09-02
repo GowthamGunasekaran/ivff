@@ -24,6 +24,7 @@ export const fetchFactoryInventory = async (payload = {}) => {
         selectedPlants.some((sp) => f.name.toLowerCase().includes(sp.toLowerCase()) || sp.toLowerCase().includes(f.name.toLowerCase()))
       );
     }
+    console.log(factories)
     return factories;
   }
 };

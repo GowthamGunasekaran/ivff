@@ -88,71 +88,71 @@ export const initFactories = [
   {
     name: "Delhi Plant",
     code: "U918 · Delhi",
-    stock: "47K",
-    eligible: "8.3K",
+    stock: 28500,
+    eligible: 5400,
     children: [
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
     ],
   },
   {
     name: "Chandigarh Plant",
     code: "U918 · Delhi",
-    stock: "27K",
-    eligible: "2.1K",
+    stock: 9500,
+    eligible: 1800,
     children: [
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
     ],
   },
   {
     name: "Mumbai Plant",
     code: "U918 · Mumbai",
-    stock: "27K",
-    eligible: "2.1K",
+    stock: 19000,
+    eligible: 3600,
     children: [
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
     ],
   },
   {
     name: "Pune Plant",
     code: "U918 · Pune",
-    stock: "27K",
-    eligible: "2.1K",
+    stock: 9500,
+    eligible: 1800,
     children: [
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
     ],
   },
   {
     name: "Agra Plant",
     code: "U918 · Agra",
-    stock: "27K",
-    eligible: "2.1K",
+    stock: 9500,
+    eligible: 1800,
     children: [
-      { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+      { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
     ],
   },
 ];
 
 export const initFactoryDetails = {
   "Delhi Plant": [
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
   ],
   "Chandigarh Plant": [
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
   ],
   "Mumbai Plant": [
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
   ],
   "Pune Plant": [
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
   ],
   "Agra Plant": [
-    { name: "Surf Excel 500g", code: "SRF-500-24", avail: "9,500", eligible: "1,800" },
+    { name: "Surf Excel 500g", code: "SRF-500-24", avail: 9500, eligible: 1800 },
   ],
 };
 

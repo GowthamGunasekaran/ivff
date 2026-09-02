@@ -96,13 +96,13 @@ function DetailRow({ detail }) {
         align="right"
         sx={{ p: "6px 4px", border: "none", fontSize: 11, color: "#5a6072", width: 54 }}
       >
-        {detail.avail || detail.stock}
+        {availNum.toLocaleString()}
       </TableCell>
       <TableCell
         align="right"
         sx={{ p: "6px 12px 6px 4px", border: "none", fontSize: 11, fontWeight: 700, color: "#2e9e5b", width: 58 }}
       >
-        {detail.eligible}
+        {eligNum.toLocaleString()}
       </TableCell>
     </TableRow>
   );
