@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useState, useMemo } from "react";
 import { useAppContext } from "../../AppContext";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -7,10 +7,14 @@ import TableHead from "@mui/material/TableHead";
 import TableRow from "@mui/material/TableRow";
 import Collapse from "@mui/material/Collapse";
 import IconButton from "@mui/material/IconButton";
+import Menu from "@mui/material/Menu";
+import MenuItem from "@mui/material/MenuItem";
 import Tooltip from "@mui/material/Tooltip";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
+import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import { exportFactoryInventoryCsv } from "../../utils/constants";
 import styles from "./FactoryInventory.module.css";
 
 const parseNum = (val) => {
@@ -106,6 +110,16 @@ function DetailRow({ detail }) {
 
 export default function FactoryInventory() {
   const { factories, factoryDetails, factoryExpanded, toggleFactory, filters } = useAppContext();
+  const [anchorEl, setAnchorEl] = useState(null);
+  const isMenuOpen = Boolean(anchorEl);
+
+  const handleOpenMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setAnchorEl(null);
+  };
 
   const cbuBadge =
     filters?.CBU && Array.isArray(filters.CBU) && filters.CBU.length > 0 && filters.CBU[0] !== "All"
@@ -154,42 +168,9 @@ export default function FactoryInventory() {
     };
   }, [factories, factoryDetails]);
 
-  // Download entire Factory Inventory as a single consolidated CSV file
-  const handleDownloadCsv = () => {
-    const headers = ["Factory Name", "Material Code", "Material Description", "Available Stock", "Eligible Quantity"];
-    const rows = [];
-
-    factoriesList.forEach((row) => {
-      const details = row.details || [];
-      if (details.length > 0) {
-        details.forEach((d) => {
-          rows.push([
-            `"${(row.name || "").replace(/"/g, '""')}"`,
-            `"${(d.code || d.sku || d.location || "").replace(/"/g, '""')}"`,
-            `"${(d.name || d.material || "").replace(/"/g, '""')}"`,
-            `"${parseNum(d.avail || d.stock)}"`,
-            `"${parseNum(d.eligible)}"`,
-          ]);
-        });
-      } else {
-        rows.push([
-          `"${(row.name || "").replace(/"/g, '""')}"`,
-          `"${(row.code || "").replace(/"/g, '""')}"`,
-          `"—"`,
-          `"${parseNum(row.stock)}"`,
-          `"${parseNum(row.eligible)}"`,
-        ]);
-      }
-    });
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `factory_inventory_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const handleExportCsv = () => {
+    handleCloseMenu();
+    exportFactoryInventoryCsv(factoriesList);
   };
 
   return (
@@ -197,13 +178,65 @@ export default function FactoryInventory() {
       {/* Header */}
       <div className={styles.header}>
         <div className={styles.titleRow}>
-          <span className={styles.title}>Factory Inventory</span>
-          <span className={styles.badge}>{cbuBadge}</span>
-          <Tooltip title="Export Factory Inventory as CSV" arrow placement="top">
-            <IconButton size="small" className={styles.moreBtn} onClick={handleDownloadCsv}>
+          <div className={styles.titleLeft}>
+            <span className={styles.title}>Factory Inventory</span>
+            <span className={styles.badge}>{cbuBadge}</span>
+          </div>
+          <Tooltip title="Options" arrow placement="top">
+            <IconButton
+              size="small"
+              className={styles.moreBtn}
+              onClick={handleOpenMenu}
+              aria-label="More options"
+              aria-controls={isMenuOpen ? "factory-inventory-menu" : undefined}
+              aria-haspopup="true"
+              aria-expanded={isMenuOpen ? "true" : undefined}
+            >
               <MoreVertIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
+          <Menu
+            id="factory-inventory-menu"
+            anchorEl={anchorEl}
+            open={isMenuOpen}
+            onClose={handleCloseMenu}
+            transformOrigin={{ horizontal: "right", vertical: "top" }}
+            anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
+            slotProps={{
+              paper: {
+                sx: {
+                  borderRadius: "8px",
+                  boxShadow: "0 6px 20px rgba(0,0,0,0.08)",
+                  border: "1px solid #e4e7eb",
+                  mt: 0.5,
+                  minWidth: 150,
+                  p: 0.5,
+                },
+              },
+            }}
+          >
+            <MenuItem
+              onClick={handleExportCsv}
+              sx={{
+                fontSize: 11.5,
+                fontWeight: 600,
+                color: "#1f2430",
+                display: "flex",
+                alignItems: "center",
+                gap: 1,
+                py: 0.8,
+                px: 1.2,
+                borderRadius: "6px",
+                "&:hover": {
+                  backgroundColor: "#f4f7ff",
+                  color: "#2c4cd3",
+                },
+              }}
+            >
+              <FileDownloadOutlinedIcon sx={{ fontSize: 16, color: "inherit" }} />
+              Export as CSV
+            </MenuItem>
+          </Menu>
         </div>
         <div className={styles.statsRow}>
           <span className={styles.statText}>

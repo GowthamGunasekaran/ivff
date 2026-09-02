@@ -21,9 +21,15 @@
 
 .titleRow {
   display: flex;
-  gap: 6px;
+  justify-content: space-between;
   align-items: center;
   width: 100%;
+}
+
+.titleLeft {
+  display: flex;
+  gap: 6px;
+  align-items: center;
 }
 
 .title {
@@ -46,9 +52,10 @@
 
 .moreBtn {
   margin-left: auto;
-  padding: 2px !important;
+  padding: 3px !important;
   color: #5a6072 !important;
   border-radius: 4px !important;
+  transition: all 0.15s ease !important;
 }
 
 .moreBtn:hover {

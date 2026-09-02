@@ -729,3 +729,59 @@ export const HEADERS = [
   { label: "STATUS" },
   { label: "ACTIONS" },
 ];
+
+/**
+ * Utility: Exports factory inventory data to a CSV file with valid .csv format and extension
+ */
+export function exportFactoryInventoryCsv(factoriesList) {
+  if (!factoriesList || factoriesList.length === 0) return;
+
+  const headers = ["Factory Name", "Material Code", "Material Description", "Available Stock", "Eligible Quantity"];
+  const rows = [];
+
+  const parseNumber = (val) => {
+    if (typeof val === "number") return val;
+    if (!val) return 0;
+    const clean = String(val).replace(/,/g, "").trim();
+    if (clean.toLowerCase().endsWith("k")) {
+      return parseFloat(clean) * 1000;
+    }
+    return parseFloat(clean) || 0;
+  };
+
+  factoriesList.forEach((row) => {
+    const details = row.details || row.children || [];
+    if (details.length > 0) {
+      details.forEach((d) => {
+        rows.push([
+          `"${(row.name || "").replace(/"/g, '""')}"`,
+          `"${(d.code || d.sku || d.location || "").replace(/"/g, '""')}"`,
+          `"${(d.name || d.material || d.desc || "").replace(/"/g, '""')}"`,
+          parseNumber(d.avail || d.stock),
+          parseNumber(d.eligible),
+        ]);
+      });
+    } else {
+      rows.push([
+        `"${(row.name || "").replace(/"/g, '""')}"`,
+        `"${(row.code || "").replace(/"/g, '""')}"`,
+        `"—"`,
+        parseNumber(row.stock),
+        parseNumber(row.eligible),
+      ]);
+    }
+  });
+
+  const csvString = [headers.join(","), ...rows.map((e) => e.join(","))].join("\r\n");
+  const blob = new Blob(["\uFEFF" + csvString], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", "factory_inventory.csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1500);
+}
