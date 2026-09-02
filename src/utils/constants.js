@@ -773,15 +773,12 @@ export function exportFactoryInventoryCsv(factoriesList) {
   });
 
   const csvString = [headers.join(","), ...rows.map((e) => e.join(","))].join("\r\n");
-  const blob = new Blob(["\uFEFF" + csvString], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
+  const encodedUri = "data:text/csv;charset=utf-8," + encodeURIComponent("\uFEFF" + csvString);
   const link = document.createElement("a");
-  link.setAttribute("href", url);
+  link.setAttribute("href", encodedUri);
   link.setAttribute("download", "factory_inventory.csv");
+  link.style.display = "none";
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
-  setTimeout(() => {
-    URL.revokeObjectURL(url);
-  }, 1500);
 }

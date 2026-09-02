@@ -30,16 +30,23 @@ export default function FilterBar() {
 
   const selectedDateVal = filters.date || filters.startDate || currentStartDate || defaultDate || "2026-08-01";
 
-  const handleDropdownChange = (label, newValue, reason) => {
-    const updated = { ...filters, [label]: newValue };
-    setFilters(updated);
-    if (reason === "clear") {
+  const handleDropdownChange = (label, newValue) => {
+    const currentVal = Array.isArray(filters[label])
+      ? filters[label]
+      : filters[label]
+      ? [filters[label]]
+      : [];
+
+    // Check if selection values actually changed before triggering API
+    const isSame =
+      currentVal.length === newValue.length &&
+      currentVal.every((val, i) => val === newValue[i]);
+
+    if (!isSame) {
+      const updated = { ...filters, [label]: newValue };
+      setFilters(updated);
       applyFilters(updated);
     }
-  };
-
-  const handleDropdownClose = () => {
-    applyFilters(filters);
   };
 
   const handleDateChange = (newDate) => {
@@ -120,8 +127,7 @@ export default function FilterBar() {
             size="small"
             options={f.options}
             value={currentVal}
-            onChange={(_, newValue, reason) => handleDropdownChange(f.label, newValue, reason)}
-            onClose={handleDropdownClose}
+            onChange={(_, newValue) => handleDropdownChange(f.label, newValue)}
             renderOption={(props, option, { selected }) => {
               const { key, ...optionProps } = props;
               return (
