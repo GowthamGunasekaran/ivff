@@ -1,3 +1,9 @@
+/**
+ * @file IndRow.jsx
+ * @description Shipment (Indentor) table row component in the planning workspace.
+ * Handles expand/collapse to show SKU rows, utilization display, status badge, and review action.
+ */
+
 import { memo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -14,18 +20,41 @@ import { StatusBadge } from "./TableBadges";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
+function getPriorityClass(priority, stylesObj) {
+  if (priority === "High") return stylesObj.indPriorityHigh;
+  if (priority === "Medium") return stylesObj.indPriorityMedium;
+  return stylesObj.indPriorityLow;
+}
+
+function resolveInitialUtil(ind) {
+  if (ind.initialUtil != null) return ind.initialUtil;
+  if (typeof ind.utilFrom === "number") {
+    return ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom;
+  }
+  return parseFloat(ind.utilFrom) || 88.0;
+}
+
+function resolveFinalUtil(ind, initialUtil) {
+  if (ind.finalUtilNum != null) return ind.finalUtilNum;
+  if (typeof ind.utilTo === "number") {
+    return ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo;
+  }
+  return parseFloat(ind.utilTo) || initialUtil;
+}
+
+function resolveWeightDisplay(ind, totalNetWeight) {
+  if (typeof ind.weight === "number") return `${ind.weight}T`;
+  if (ind.weight) return ind.weight;
+  if (totalNetWeight > 0) return `${totalNetWeight.toFixed(1)}T`;
+  return "18T";
+}
+
 export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
   const skus = ind.children || [];
   const priority = skus[0]?.Shipment_Priority || ind.priority || "Medium";
   const status = skus[0]?.status || ind.status || "Accepted";
-  const cap = 100.0; // Static 100% capacity cap
 
-  const priorityClass =
-    priority === "High"
-      ? styles.indPriorityHigh
-      : priority === "Medium"
-      ? styles.indPriorityMedium
-      : styles.indPriorityLow;
+  const priorityClass = getPriorityClass(priority, styles);
 
   const totalOrdQty = skus.reduce((s, r) => s + (Number(r.ord_qty) || 0), 0);
   const totalOrdCs = skus.reduce((s, r) => s + (Number(r.cs) || 0), 0);
@@ -33,13 +62,9 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const totalRecCs = skus.reduce((s, r) => s + (parseFloat(r.recQty) || 0), 0);
   const totalRecT = skus.reduce((s, r) => s + (parseFloat(r.recQty) || 0) * (r.csWeight || ((parseFloat(r.weight) || 4) / 1000)), 0).toFixed(2);
   const totalElig = skus.reduce((s, r) => s + (Number(r.eligible) || 0), 0);
-  const initialUtilNum = ind.initialUtil != null
-    ? ind.initialUtil
-    : (typeof ind.utilFrom === "number" ? (ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom) : parseFloat(ind.utilFrom) || 88.0);
 
-  const finalUtilNum = ind.finalUtilNum != null
-    ? ind.finalUtilNum
-    : (typeof ind.utilTo === "number" ? (ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo) : parseFloat(ind.utilTo) || initialUtilNum);
+  const initialUtilNum = resolveInitialUtil(ind);
+  const finalUtilNum = resolveFinalUtil(ind, initialUtilNum);
 
   const isOverUtilized = finalUtilNum > 100.0;
   const utilFromFormatted = `${initialUtilNum.toFixed(1)}%`;
@@ -49,7 +74,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const totalSumQty = totalOrdQty + totalRecCs;
   const totalSumT = (totalNetWeight + parseFloat(totalRecT || 0)).toFixed(2);
   const totalDisplay = (totalOrdQty > 0 || totalRecCs > 0) ? `${totalSumQty.toLocaleString()} / ${totalSumT}T` : "—";
-  const weightDisplay = typeof ind.weight === "number" ? `${ind.weight}T` : (ind.weight || (totalNetWeight > 0 ? `${totalNetWeight.toFixed(1)}T` : "18T"));
+  const weightDisplay = resolveWeightDisplay(ind, totalNetWeight);
 
   return (
     <TableRow className={`${styles.indRow} ${isOverUtilized ? styles.indRowOverUtilized : ""}`} onClick={onToggle}>
@@ -71,7 +96,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
           </span>
           {isOverUtilized && (
             <Tooltip title={tooltipMessage} arrow placement="top">
-              <span className={styles.indInfoIconWrapper} onClick={(e) => e.stopPropagation()}>
+              <span className={styles.indInfoIconWrapper} onClick={e => e.stopPropagation()}>
                 <InfoOutlinedIcon className={styles.indInfoIcon} />
               </span>
             </Tooltip>
@@ -119,7 +144,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       <TableCell
         className={styles.indCell}
         sx={{ width: COL.statusAction, textAlign: "center", py: "4px" }}
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
           <StatusBadge status={status.toUpperCase()} />
@@ -167,7 +192,7 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
                       key={skuId + si}
                       sku={sku}
                       highlight={isHighlight}
-                      onRecChange={(val) => onRecChange && onRecChange(ind.id, si, val)}
+                      onRecChange={val => onRecChange && onRecChange(ind.id, si, val)}
                     />
                   );
                 })}

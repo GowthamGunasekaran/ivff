@@ -1,3 +1,9 @@
+/**
+ * @file FactoryInventory.jsx
+ * @description Factory inventory panel component showing stock and eligible quantities
+ * per factory and material. Supports expand/collapse, totals, and CSV export.
+ */
+
 import { Fragment, useState, useMemo } from "react";
 import { useAppContext } from "../../AppContext";
 import Table from "@mui/material/Table";
@@ -128,16 +134,13 @@ export default function FactoryInventory() {
 
   // Dynamically calculate stock and eligible sums for all materials and plants
   const { factoriesList, displayTotalStock, displayTotalEligible } = useMemo(() => {
-    let totalStock = 0;
-    let totalEligible = 0;
-
-    const list = (factories || []).map((row) => {
+    const list = (factories || []).map(row => {
       const details = row.children || (factoryDetails && factoryDetails[row.name]) || [];
       let plantStock = 0;
       let plantEligible = 0;
 
       if (details.length > 0) {
-        details.forEach((d) => {
+        details.forEach(d => {
           plantStock += parseNum(d.avail || d.stock);
           plantEligible += parseNum(d.eligible);
         });
@@ -145,9 +148,6 @@ export default function FactoryInventory() {
         plantStock = parseNum(row.stock);
         plantEligible = parseNum(row.eligible);
       }
-
-      totalStock += plantStock;
-      totalEligible += plantEligible;
 
       return {
         ...row,
@@ -158,6 +158,9 @@ export default function FactoryInventory() {
         displayEligible: formatDisplay(plantEligible),
       };
     });
+
+    const totalStock = list.reduce((acc, item) => acc + item.computedStock, 0);
+    const totalEligible = list.reduce((acc, item) => acc + item.computedEligible, 0);
 
     return {
       factoriesList: list,

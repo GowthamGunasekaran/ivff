@@ -1,3 +1,9 @@
+/**
+ * @file LeftRail.jsx
+ * @description Left navigation rail component with icon buttons for
+ * navigating between application sections.
+ */
+
 import svgPaths from "../../../imports/svg-k79osjc0g6";
 import styles from "./LeftRail.module.css";
 

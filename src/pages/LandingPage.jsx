@@ -1,3 +1,9 @@
+/**
+ * @file LandingPage.jsx
+ * @description Main landing page component providing tab-based navigation
+ * between the Load Optimizer and other application views.
+ */
+
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import AppHeader from "../components/AppHeader/AppHeader";

@@ -1,3 +1,9 @@
+/**
+ * @file AppHeader.jsx
+ * @description Application top header component displaying the app title,
+ * user information, and navigation icons.
+ */
+
 import svgPaths from "../../../imports/svg-k79osjc0g6";
 import styles from "./AppHeader.module.css";
 

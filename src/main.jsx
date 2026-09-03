@@ -1,3 +1,8 @@
+/**
+ * @file main.jsx
+ * @description Application entry point. Mounts the React application into the DOM root element.
+ */
+
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";

@@ -1,3 +1,9 @@
+/**
+ * @file ReviewManifest.jsx
+ * @description Consolidated manifest table component for the review dialog.
+ * Displays all SKUs with original/recommended/final quantities and weights.
+ */
+
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";

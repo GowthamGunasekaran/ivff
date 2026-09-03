@@ -1,3 +1,9 @@
+/**
+ * @file ShipmentPlanningWorkspace.jsx
+ * @description Main shipment planning workspace with hierarchical plant/DC/shipment table,
+ * CBU search, pagination, and review dialog integration.
+ */
+
 import { useState, useMemo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";

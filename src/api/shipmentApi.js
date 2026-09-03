@@ -1,3 +1,10 @@
+/**
+ * @file shipmentApi.js
+ * @description API functions for fetching, updating, and searching shipment data.
+ * Provides plant hierarchy, shipment details, plan updates, and search functionality.
+ * Falls back to mock data from constants if any API is unavailable.
+ */
+
 import { initPlantHierarchy, mockShipmentDetailsByDc } from "../utils/constants";
 
 /**

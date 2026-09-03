@@ -1,3 +1,9 @@
+/**
+ * @file App.jsx
+ * @description Root application component that sets up the MUI theme provider
+ * and renders the main router handler.
+ */
+
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import IdppRouterHandler from "./routers/IdppRouterHandler";
 

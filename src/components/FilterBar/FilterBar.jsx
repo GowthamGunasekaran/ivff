@@ -1,3 +1,9 @@
+/**
+ * @file FilterBar.jsx
+ * @description Filter bar component with multi-select dropdowns for Source Plan/DC
+ * and a single date picker. Triggers cascading filter updates via app context.
+ */
+
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import Checkbox from "@mui/material/Checkbox";
@@ -11,6 +17,16 @@ import styles from "./FilterBar.module.css";
 const icon = <CheckBoxOutlineBlankIcon fontSize="small" sx={{ color: "#8a90a0", fontSize: 16 }} />;
 const checkedIcon = <CheckBoxIcon fontSize="small" sx={{ color: "#2c4cd3", fontSize: 16 }} />;
 
+function normalizeFilterValue(val) {
+  if (Array.isArray(val)) {
+    return val;
+  }
+  if (val) {
+    return [val];
+  }
+  return [];
+}
+
 export default function FilterBar() {
   const {
     filters,
@@ -22,7 +38,6 @@ export default function FilterBar() {
     defaultDate,
     currentStartDate,
     setCurrentStartDate,
-    currentEndDate,
     setCurrentEndDate,
   } = useAppContext();
 
@@ -31,11 +46,7 @@ export default function FilterBar() {
   const selectedDateVal = filters.date || filters.startDate || currentStartDate || defaultDate || "2026-08-01";
 
   const handleDropdownChange = (label, newValue) => {
-    const currentVal = Array.isArray(filters[label])
-      ? filters[label]
-      : filters[label]
-      ? [filters[label]]
-      : [];
+    const currentVal = normalizeFilterValue(filters[label]);
 
     // Check if selection values actually changed before triggering API
     const isSame =
@@ -49,7 +60,7 @@ export default function FilterBar() {
     }
   };
 
-  const handleDateChange = (newDate) => {
+  const handleDateChange = newDate => {
     const updated = {
       ...filters,
       date: newDate,
@@ -110,13 +121,9 @@ export default function FilterBar() {
     <div className={styles.filterBar}>
       {/* Searchable multi-select dropdowns: Source Plan, DC (CBU is handled via search) */}
       {filterDefs
-        .filter((f) => f.label !== "CBU")
-        .map((f) => {
-          const currentVal = Array.isArray(filters[f.label])
-          ? filters[f.label]
-          : filters[f.label]
-          ? [filters[f.label]]
-          : [];
+        .filter(f => f.label !== "CBU")
+        .map(f => {
+          const currentVal = normalizeFilterValue(filters[f.label]);
 
         return (
           <Autocomplete

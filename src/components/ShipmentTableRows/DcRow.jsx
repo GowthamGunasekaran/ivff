@@ -1,3 +1,9 @@
+/**
+ * @file DcRow.jsx
+ * @description Distribution center row component in the shipment planning table.
+ * Handles expand/collapse, loading states, error states, and renders IndRow children.
+ */
+
 import { memo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";

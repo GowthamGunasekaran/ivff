@@ -1,4 +1,10 @@
-import { initFactories, initFactoryDetails } from "../utils/constants";
+/**
+ * @file factoryApi.js
+ * @description API functions for fetching factory inventory data.
+ * Falls back to mock data from constants if the API is unavailable.
+ */
+
+import { initFactories } from "../utils/constants";
 
 export const fetchFactoryInventory = async (payload = {}) => {
   try {
@@ -20,11 +26,11 @@ export const fetchFactoryInventory = async (payload = {}) => {
     let factories = [...initFactories];
 
     if (selectedPlants.length > 0) {
-      factories = factories.filter((f) =>
-        selectedPlants.some((sp) => f.name.toLowerCase().includes(sp.toLowerCase()) || sp.toLowerCase().includes(f.name.toLowerCase()))
+      factories = factories.filter(f =>
+        selectedPlants.some(sp => f.name.toLowerCase().includes(sp.toLowerCase()) || sp.toLowerCase().includes(f.name.toLowerCase()))
       );
     }
-    console.log(factories)
+    console.log(factories);
     return factories;
   }
 };

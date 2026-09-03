@@ -1,5 +1,73 @@
+/**
+ * @file SearchResultPanel.jsx
+ * @description Search results panel showing matched materials across shipments.
+ * Displays material IDs, descriptions, allocation, availability, and DC counts.
+ */
+
 import CircularProgress from "@mui/material/CircularProgress";
 import styles from "./SearchResultPanel.module.css";
+
+function processShipmentSkus(ind, dcId, termLower, materialMap, dcs) {
+  let shipmentMatched = false;
+  const skus = ind.children || [];
+  for (const s of skus) {
+    const id = s.Material || s.id || "";
+    const desc = s.MaterialDescription || s.desc || "";
+    if (
+      id.toLowerCase().includes(termLower) ||
+      desc.toLowerCase().includes(termLower)
+    ) {
+      shipmentMatched = true;
+      dcs.add(dcId);
+      if (!materialMap[id]) {
+        materialMap[id] = {
+          material: id,
+          materialDescription: desc || id,
+          allocated: 0,
+          available: 12000,
+          shipmentsCount: 0,
+          dcsCount: new Set(),
+        };
+      }
+      const alloc = (Number(s.ord_qty) || 0) + (parseFloat(s.recQty) || 0);
+      materialMap[id].allocated += alloc || 100;
+      materialMap[id].shipmentsCount += 1;
+      materialMap[id].dcsCount.add(dcId);
+    }
+  }
+  return shipmentMatched;
+}
+
+function computeLocalSearchResults(data, dcShipmentsCache, displayTerm) {
+  const termLower = displayTerm.toLowerCase().trim();
+  const materialMap = {};
+  let inds = 0;
+  const dcs = new Set();
+
+  for (const plant of data) {
+    for (const dc of plant.children || []) {
+      const cacheKey = `${plant.id}_${dc.id}`;
+      const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
+      for (const ind of shipments) {
+        if (processShipmentSkus(ind, dc.id, termLower, materialMap, dcs)) {
+          inds++;
+        }
+      }
+    }
+  }
+
+  const resultsList = Object.values(materialMap).map(m => ({
+    ...m,
+    dcsCount: m.dcsCount.size,
+    remaining: Math.max(0, m.available - m.allocated),
+  }));
+
+  return {
+    resultsList,
+    totalShipments: inds,
+    totalDcs: dcs.size,
+  };
+}
 
 export default function SearchResultPanel({
   term,
@@ -28,55 +96,10 @@ export default function SearchResultPanel({
   let totalDcs = searchResults?.totalDcs || 0;
 
   if (!searchResults && displayTerm) {
-    const termLower = displayTerm.toLowerCase().trim();
-    const materialMap = {};
-    let inds = 0;
-    const dcs = new Set();
-
-    data.forEach((plant) => {
-      (plant.children || []).forEach((dc) => {
-        const cacheKey = `${plant.id}_${dc.id}`;
-        const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
-        shipments.forEach((ind) => {
-          let shipmentMatched = false;
-          const skus = ind.children || [];
-          skus.forEach((s) => {
-            const id = s.Material || s.id || "";
-            const desc = s.MaterialDescription || s.desc || "";
-            if (
-              id.toLowerCase().includes(termLower) ||
-              desc.toLowerCase().includes(termLower)
-            ) {
-              shipmentMatched = true;
-              dcs.add(dc.id);
-              if (!materialMap[id]) {
-                materialMap[id] = {
-                  material: id,
-                  materialDescription: desc || id,
-                  allocated: 0,
-                  available: 12000,
-                  shipmentsCount: 0,
-                  dcsCount: new Set(),
-                };
-              }
-              const alloc = (Number(s.ord_qty) || 0) + (parseFloat(s.recQty) || 0);
-              materialMap[id].allocated += alloc || 100;
-              materialMap[id].shipmentsCount += 1;
-              materialMap[id].dcsCount.add(dc.id);
-            }
-          });
-          if (shipmentMatched) inds++;
-        });
-      });
-    });
-
-    resultsList = Object.values(materialMap).map((m) => ({
-      ...m,
-      dcsCount: m.dcsCount.size,
-      remaining: Math.max(0, m.available - m.allocated),
-    }));
-    totalShipments = inds;
-    totalDcs = dcs.size;
+    const local = computeLocalSearchResults(data, dcShipmentsCache, displayTerm);
+    resultsList = local.resultsList;
+    totalShipments = local.totalShipments;
+    totalDcs = local.totalDcs;
   }
 
   if (!isLoading && resultsList.length === 0) {
@@ -107,7 +130,7 @@ export default function SearchResultPanel({
       </div>
 
       <div className={styles.grid}>
-        {["Material", "Total Allocated in Shipments", "Total Available in Factory", "Remaining", "Shipments"].map((h) => (
+        {["Material", "Total Allocated in Shipments", "Total Available in Factory", "Remaining", "Shipments"].map(h => (
           <div key={h} className={styles.gridHeader}>{h}</div>
         ))}
         {resultsList.map((item, idx) => (
@@ -129,4 +152,3 @@ export default function SearchResultPanel({
     </div>
   );
 }
-

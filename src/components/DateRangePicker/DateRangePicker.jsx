@@ -1,3 +1,10 @@
+/**
+ * @file DateRangePicker.jsx
+ * @description Date range calendar picker component with popover UI.
+ * Supports staged selection (start + end), hover highlighting, min/max constraints,
+ * apply/reset actions, and range visualization.
+ */
+
 import { useState, useMemo } from "react";
 import Popover from "@mui/material/Popover";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -10,14 +17,16 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December"
 ];
 
+const DEFAULT_START = "2026-08-01";
+const DEFAULT_END = "2026-08-31";
+
 function formatDateDisplay(dateStr) {
   if (!dateStr) return "";
   const parts = dateStr.split("-");
   if (parts.length !== 3) return dateStr;
-  const year = parts[0];
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  const day = parts[2];
-  const monthName = MONTH_NAMES[monthIdx] ? MONTH_NAMES[monthIdx].substring(0, 3) : parts[1];
+  const { 0: year, 1: rawMonth, 2: day } = parts;
+  const monthIdx = parseInt(rawMonth, 10) - 1;
+  const monthName = MONTH_NAMES[monthIdx] ? MONTH_NAMES[monthIdx].substring(0, 3) : rawMonth;
   return `${monthName} ${day}, ${year}`;
 }
 
@@ -27,6 +36,81 @@ function getDaysInMonth(year, month) {
 
 function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
+}
+
+function getInitialViewDate(startDate, minDate) {
+  if (startDate) {
+    return new Date(startDate);
+  }
+  if (minDate) {
+    return new Date(minDate);
+  }
+  return new Date(2026, 7, 1);
+}
+
+function computeRangeBounds(tempStart, effectiveEnd) {
+  if (!tempStart || !effectiveEnd) {
+    return { rangeMin: "", rangeMax: "" };
+  }
+  return {
+    rangeMin: tempStart < effectiveEnd ? tempStart : effectiveEnd,
+    rangeMax: tempStart < effectiveEnd ? effectiveEnd : tempStart,
+  };
+}
+
+function getSelectionHint(tempStart, tempEnd) {
+  if (!tempStart) {
+    return "Select start date";
+  }
+  if (!tempEnd) {
+    return "Select end date";
+  }
+  return `${tempStart.slice(5)} to ${tempEnd.slice(5)}`;
+}
+
+function computeCellStyle(dateStr, isDisabled, isStart, isEnd, isSingle, rangeMin, rangeMax, isRangeStart, isRangeEnd) {
+  const inRange = Boolean(rangeMin && rangeMax && dateStr > rangeMin && dateStr < rangeMax);
+  let cellStyle = styles.dayCell;
+  if (isDisabled) cellStyle += ` ${styles.dayCellDisabled}`;
+  if (inRange) cellStyle += ` ${styles.dayCellInRange}`;
+  if (isRangeStart) cellStyle += ` ${styles.dayCellStart}`;
+  if (isRangeEnd && !isSingle) cellStyle += ` ${styles.dayCellEnd}`;
+  return cellStyle;
+}
+
+function DayGridCell({ item, tempStart, tempEnd, hoverDate, onDateClick, onMouseEnter }) {
+  if (item.empty) {
+    return <div className={`${styles.dayCell} ${styles.dayCellEmpty}`} />;
+  }
+
+  const { dateStr, dayNumber, isDisabled } = item;
+  const isStart = tempStart === dateStr;
+  const isEnd = tempEnd === dateStr;
+  const isSingle = isStart && (!tempEnd || tempStart === tempEnd);
+
+  const effectiveEnd = tempEnd || (tempStart && hoverDate ? hoverDate : "");
+  const { rangeMin, rangeMax } = computeRangeBounds(tempStart, effectiveEnd);
+
+  const isRangeStart = isStart && (tempEnd || hoverDate) && dateStr < (tempEnd || hoverDate);
+  const isRangeEnd = isEnd || (tempStart && hoverDate === dateStr && dateStr > tempStart);
+
+  const cellStyle = computeCellStyle(dateStr, isDisabled, isStart, isEnd, isSingle, rangeMin, rangeMax, isRangeStart, isRangeEnd);
+
+  return (
+    <div
+      className={cellStyle}
+      onClick={() => !isDisabled && onDateClick(dateStr)}
+      onMouseEnter={() => !isDisabled && onMouseEnter(dateStr)}
+    >
+      <div
+        className={`${styles.dayCircle} ${
+          isStart || isEnd ? styles.dayCircleSelected : ""
+        }`}
+      >
+        {dayNumber}
+      </div>
+    </div>
+  );
 }
 
 export default function DateRangePicker({
@@ -45,11 +129,11 @@ export default function DateRangePicker({
   const [hoverDate, setHoverDate] = useState(null);
 
   // Active viewing year/month on calendar
-  const initialDate = startDate ? new Date(startDate) : (minDate ? new Date(minDate) : new Date(2026, 7, 1));
+  const initialDate = getInitialViewDate(startDate, minDate);
   const [viewYear, setViewYear] = useState(initialDate.getFullYear() || 2026);
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth() >= 0 ? initialDate.getMonth() : 7);
 
-  const handleClickTrigger = (event) => {
+  const handleClickTrigger = event => {
     setTempStart(startDate || "");
     setTempEnd(endDate || "");
     if (startDate) {
@@ -64,6 +148,8 @@ export default function DateRangePicker({
         setViewYear(d.getFullYear());
         setViewMonth(d.getMonth());
       }
+    } else {
+      // no-op: keep current view
     }
     setAnchorEl(event.currentTarget);
   };
@@ -82,23 +168,25 @@ export default function DateRangePicker({
       }
     } else if (tempStart) {
       onChange(tempStart, tempStart);
+    } else {
+      // no-op: nothing to apply
     }
     handleClose();
   };
 
-  const handleClear = (e) => {
+  const handleClear = e => {
     e.stopPropagation();
-    onChange(minDate || "2026-08-01", maxDate || "2026-08-31");
+    onChange(minDate || DEFAULT_START, maxDate || DEFAULT_END);
   };
 
   const handleReset = () => {
-    setTempStart(minDate || "2026-08-01");
-    setTempEnd(maxDate || "2026-08-31");
-    onChange(minDate || "2026-08-01", maxDate || "2026-08-31");
+    setTempStart(minDate || DEFAULT_START);
+    setTempEnd(maxDate || DEFAULT_END);
+    onChange(minDate || DEFAULT_START, maxDate || DEFAULT_END);
     handleClose();
   };
 
-  const handleDateClick = (dateStr) => {
+  const handleDateClick = dateStr => {
     if (!tempStart || (tempStart && tempEnd)) {
       setTempStart(dateStr);
       setTempEnd("");
@@ -117,18 +205,18 @@ export default function DateRangePicker({
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
-      setViewYear((y) => y - 1);
+      setViewYear(y => y - 1);
     } else {
-      setViewMonth((m) => m - 1);
+      setViewMonth(m => m - 1);
     }
   };
 
   const handleNextMonth = () => {
     if (viewMonth === 11) {
       setViewMonth(0);
-      setViewYear((y) => y + 1);
+      setViewYear(y => y + 1);
     } else {
-      setViewMonth((m) => m + 1);
+      setViewMonth(m => m + 1);
     }
   };
 
@@ -230,57 +318,23 @@ export default function DateRangePicker({
 
           {/* Days Grid */}
           <div className={styles.daysGrid} onMouseLeave={() => setHoverDate(null)}>
-            {daysGrid.map((item) => {
-              if (item.empty) {
-                return <div key={item.key} className={`${styles.dayCell} ${styles.dayCellEmpty}`} />;
-              }
-
-              const { dateStr, dayNumber, isDisabled } = item;
-              const isStart = tempStart === dateStr;
-              const isEnd = tempEnd === dateStr;
-              const isSingle = isStart && (!tempEnd || tempStart === tempEnd);
-
-              const effectiveEnd = tempEnd || (tempStart && hoverDate ? hoverDate : "");
-              const rangeMin = tempStart && effectiveEnd ? (tempStart < effectiveEnd ? tempStart : effectiveEnd) : "";
-              const rangeMax = tempStart && effectiveEnd ? (tempStart < effectiveEnd ? effectiveEnd : tempStart) : "";
-
-              const inRange = Boolean(rangeMin && rangeMax && dateStr > rangeMin && dateStr < rangeMax);
-              const isRangeStart = isStart && (tempEnd || hoverDate) && dateStr < (tempEnd || hoverDate);
-              const isRangeEnd = isEnd || (tempStart && hoverDate === dateStr && dateStr > tempStart);
-
-              let cellStyle = styles.dayCell;
-              if (isDisabled) cellStyle += ` ${styles.dayCellDisabled}`;
-              if (inRange) cellStyle += ` ${styles.dayCellInRange}`;
-              if (isRangeStart) cellStyle += ` ${styles.dayCellStart}`;
-              if (isRangeEnd && !isSingle) cellStyle += ` ${styles.dayCellEnd}`;
-
-              return (
-                <div
-                  key={item.key}
-                  className={cellStyle}
-                  onClick={() => !isDisabled && handleDateClick(dateStr)}
-                  onMouseEnter={() => !isDisabled && tempStart && !tempEnd && setHoverDate(dateStr)}
-                >
-                  <div
-                    className={`${styles.dayCircle} ${
-                      isStart || isEnd ? styles.dayCircleSelected : ""
-                    }`}
-                  >
-                    {dayNumber}
-                  </div>
-                </div>
-              );
-            })}
+            {daysGrid.map(item => (
+              <DayGridCell
+                key={item.key}
+                item={item}
+                tempStart={tempStart}
+                tempEnd={tempEnd}
+                hoverDate={hoverDate}
+                onDateClick={handleDateClick}
+                onMouseEnter={dateStr => tempStart && !tempEnd && setHoverDate(dateStr)}
+              />
+            ))}
           </div>
 
           {/* Footer Actions */}
           <div className={styles.popoverFooter}>
             <span className={styles.selectionHint}>
-              {!tempStart
-                ? "Select start date"
-                : !tempEnd
-                ? "Select end date"
-                : `${tempStart.slice(5)} to ${tempEnd.slice(5)}`}
+              {getSelectionHint(tempStart, tempEnd)}
             </span>
             <div className={styles.footerBtns}>
               <button type="button" className={styles.btnCancel} onClick={handleReset} title="Reset to default planning range">

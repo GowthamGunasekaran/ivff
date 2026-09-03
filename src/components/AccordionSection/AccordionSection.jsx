@@ -1,3 +1,9 @@
+/**
+ * @file AccordionSection.jsx
+ * @description Collapsible accordion section component with toggle button,
+ * optional badge, and smooth collapse animation.
+ */
+
 import { useState } from "react";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Collapse from "@mui/material/Collapse";
@@ -9,7 +15,7 @@ export default function AccordionSection({ title, badge, children, defaultOpen =
   return (
     <div className={styles.wrapper}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => setOpen(v => !v)}
         className={styles.toggleBtn}
       >
         <ExpandMoreIcon

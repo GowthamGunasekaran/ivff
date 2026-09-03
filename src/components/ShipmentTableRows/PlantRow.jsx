@@ -1,3 +1,9 @@
+/**
+ * @file PlantRow.jsx
+ * @description Plant (factory) table row component in the shipment planning workspace.
+ * Handles expand/collapse to reveal DC rows and shows plant-level summary badges.
+ */
+
 import { memo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
@@ -46,7 +52,7 @@ export const PlantRow = memo(function PlantRow({
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span className={styles.plantName}>{plant.name}</span>
             <span className={styles.plantLocation}>{plant.location}</span>
-            {plantBadges.map((b) => (
+            {plantBadges.map(b => (
               <span
                 key={b.label}
                 className={b.type === "warning" ? styles.plantBadgeWarning : styles.plantBadgeNeutral}

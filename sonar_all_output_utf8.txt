@@ -1,0 +1,8 @@
+--- ALL SONAR RULES TRIGGERED ---
+{}
+
+--- BY SOURCE FILE ---
+
+No Sonar issues found across all source files!
+
+Total SonarJS issues found: 0

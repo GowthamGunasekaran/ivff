@@ -1,3 +1,9 @@
+/**
+ * @file IdppRouterHandler.jsx
+ * @description Root router component wrapping the app with BrowserRouter, AppProvider context,
+ * and defining the main route to LandingPage.
+ */
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AppProvider } from "../AppContext";
 import LandingPage from "../pages/LandingPage";

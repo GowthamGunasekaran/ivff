@@ -1,3 +1,9 @@
+/**
+ * @file EChartWrapper.jsx
+ * @description Wrapper component for Apache ECharts visualizations.
+ * Handles auto-resize on window resize and container dimension changes.
+ */
+
 import { useRef, useEffect } from "react";
 import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";

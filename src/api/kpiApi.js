@@ -1,3 +1,9 @@
+/**
+ * @file kpiApi.js
+ * @description API functions for fetching KPI (Key Performance Indicator) data.
+ * Falls back to mock data from constants if the API is unavailable.
+ */
+
 import { kpiData } from "../utils/constants";
 
 export const fetchKPIs = async (payload = {}) => {

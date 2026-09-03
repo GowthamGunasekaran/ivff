@@ -1,3 +1,9 @@
+/**
+ * @file LoadOptimizer.jsx
+ * @description Load Optimizer dashboard page displaying KPI cards, trend charts,
+ * factory inventory panel, and shipment planning workspace.
+ */
+
 import FilterBar from "../components/FilterBar/FilterBar";
 import KPICard from "../components/KPICard/KPICard";
 import EChartWrapper from "../components/EChartWrapper/EChartWrapper";
@@ -45,7 +51,7 @@ function ChartLegend() {
 
   return (
     <div className={styles.chartLegend}>
-      {legends.map((l) => (
+      {legends.map(l => (
         <div key={l.label} className={styles.legendItem}>
           <svg width="20" height="2">
             {l.dash ? (

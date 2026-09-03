@@ -1,9 +1,36 @@
+/**
+ * @file SkuRow.jsx
+ * @description SKU (material) table row component within the shipment planning workspace.
+ * Displays material info, priority, order/recommended quantities, and an editable rec qty input.
+ */
+
 import { memo, useState, useEffect } from "react";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import { PBadge, FillBadge } from "./TableBadges";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
+
+function getPriorityVal(sku) {
+  if (sku.risk_flag) return sku.risk_flag.toUpperCase();
+  if (sku.Shipment_Priority === "High") return "P1";
+  if (sku.Shipment_Priority === "Medium") return "P2";
+  return "P3";
+}
+
+function getOrderLossDisplay(sku, priorityVal) {
+  if (sku.orderLossCases != null) {
+    return Number(sku.orderLossCases) > 0 ? `${Number(sku.orderLossCases).toLocaleString()} cs` : "—";
+  }
+  return (priorityVal === "P1" || sku.risk_flag === "p1") ? "142 cs" : "—";
+}
+
+function getMsdnLossDisplay(sku, priorityVal) {
+  if (sku.msdnLossCases != null) {
+    return Number(sku.msdnLossCases) > 0 ? `${Number(sku.msdnLossCases).toLocaleString()} cs` : "—";
+  }
+  return (priorityVal === "P2" || sku.risk_flag === "p2") ? "85 cs" : "—";
+}
 
 export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   const highlightClass = highlight ? styles.skuRowHighlight : "";
@@ -19,15 +46,11 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   const ordCsVal = Number(sku.cs) || 0;
   const ordTVal = parseFloat(sku.netweight) || 0;
   const netWeightDisplay = sku.netweight != null ? `${sku.netweight}T` : "—";
-  const priorityVal = sku.risk_flag ? sku.risk_flag.toUpperCase() : (sku.Shipment_Priority === "High" ? "P1" : sku.Shipment_Priority === "Medium" ? "P2" : "P3");
+  const priorityVal = getPriorityVal(sku);
 
   const sourcePlantDisplay = sku.sourcePlant || sku.plantCode || sku.plant || "U918";
-  const orderLossDisplay = sku.orderLossCases != null
-    ? (Number(sku.orderLossCases) > 0 ? `${Number(sku.orderLossCases).toLocaleString()} cs` : "—")
-    : (priorityVal === "P1" || sku.risk_flag === "p1" ? "142 cs" : "—");
-  const msdnLossDisplay = sku.msdnLossCases != null
-    ? (Number(sku.msdnLossCases) > 0 ? `${Number(sku.msdnLossCases).toLocaleString()} cs` : "—")
-    : (priorityVal === "P2" || sku.risk_flag === "p2" ? "85 cs" : "—");
+  const orderLossDisplay = getOrderLossDisplay(sku, priorityVal);
+  const msdnLossDisplay = getMsdnLossDisplay(sku, priorityVal);
 
   const [val, setVal] = useState(skuRecCs);
 
@@ -35,7 +58,7 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
     setVal(skuRecCs);
   }, [skuRecCs]);
 
-  const handleChange = (e) => {
+  const handleChange = e => {
     const raw = e.target.value;
     if (raw === "") {
       setVal("");

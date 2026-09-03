@@ -1,3 +1,9 @@
+/**
+ * @file KPICard.jsx
+ * @description KPI card component displaying a titled metric panel with
+ * icon, gradient background, and a row of labelled metric values.
+ */
+
 import { Fragment } from "react";
 import styles from "./KPICard.module.css";
 

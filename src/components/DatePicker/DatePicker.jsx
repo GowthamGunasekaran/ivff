@@ -1,3 +1,9 @@
+/**
+ * @file DatePicker.jsx
+ * @description Single-date calendar picker component with popover UI.
+ * Supports min/max date constraints, reset functionality, and keyboard navigation.
+ */
+
 import { useState, useMemo } from "react";
 import Popover from "@mui/material/Popover";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
@@ -18,7 +24,7 @@ const getTodayDateString = () => {
   return `${year}-${month}-${day}`;
 };
 
-const isValidDate = (str) => {
+const isValidDate = str => {
   if (!str || typeof str !== "string") return false;
   if (str.includes("<") || str.includes(">") || str.toLowerCase().includes("doctype") || str.toLowerCase().includes("html")) {
     return false;
@@ -30,10 +36,9 @@ const isValidDate = (str) => {
 function formatDateDisplay(dateStr) {
   if (!isValidDate(dateStr)) return "Jan 01, 2026";
   const parts = dateStr.split("-");
-  const year = parts[0];
-  const monthIdx = parseInt(parts[1], 10) - 1;
-  const day = parts[2];
-  const monthName = MONTH_NAMES[monthIdx] ? MONTH_NAMES[monthIdx].substring(0, 3) : parts[1];
+  const { 0: year, 1: rawMonth, 2: day } = parts;
+  const monthIdx = parseInt(rawMonth, 10) - 1;
+  const monthName = MONTH_NAMES[monthIdx] ? MONTH_NAMES[monthIdx].substring(0, 3) : rawMonth;
   return `${monthName} ${day}, ${year}`;
 }
 
@@ -43,6 +48,12 @@ function getDaysInMonth(year, month) {
 
 function getFirstDayOfMonth(year, month) {
   return new Date(year, month, 1).getDay();
+}
+
+function resolveEffectiveDefault(defaultDate, minDate, fallbackDefault) {
+  if (isValidDate(defaultDate)) return defaultDate;
+  if (isValidDate(minDate)) return minDate;
+  return fallbackDefault;
 }
 
 export default function DatePicker({
@@ -56,7 +67,7 @@ export default function DatePicker({
   const open = Boolean(anchorEl);
 
   const fallbackDefault = getTodayDateString();
-  const effectiveDefault = isValidDate(defaultDate) ? defaultDate : (isValidDate(minDate) ? minDate : fallbackDefault);
+  const effectiveDefault = resolveEffectiveDefault(defaultDate, minDate, fallbackDefault);
   const effectiveDate = isValidDate(date) ? date : effectiveDefault;
 
   const initialDate = useMemo(() => {
@@ -67,7 +78,7 @@ export default function DatePicker({
   const [viewYear, setViewYear] = useState(initialDate.getFullYear());
   const [viewMonth, setViewMonth] = useState(initialDate.getMonth());
 
-  const handleClickTrigger = (event) => {
+  const handleClickTrigger = event => {
     const d = new Date(effectiveDate);
     if (!isNaN(d.getTime())) {
       setViewYear(d.getFullYear());
@@ -80,12 +91,12 @@ export default function DatePicker({
     setAnchorEl(null);
   };
 
-  const handleDateSelect = (dateStr) => {
+  const handleDateSelect = dateStr => {
     onChange(dateStr);
     handleClose();
   };
 
-  const handleReset = (e) => {
+  const handleReset = e => {
     e.stopPropagation();
     onChange(effectiveDefault);
   };
@@ -93,18 +104,18 @@ export default function DatePicker({
   const handlePrevMonth = () => {
     if (viewMonth === 0) {
       setViewMonth(11);
-      setViewYear((y) => y - 1);
+      setViewYear(y => y - 1);
     } else {
-      setViewMonth((m) => m - 1);
+      setViewMonth(m => m - 1);
     }
   };
 
   const handleNextMonth = () => {
     if (viewMonth === 11) {
       setViewMonth(0);
-      setViewYear((y) => y + 1);
+      setViewYear(y => y + 1);
     } else {
-      setViewMonth((m) => m + 1);
+      setViewMonth(m => m + 1);
     }
   };
 
@@ -124,9 +135,7 @@ export default function DatePicker({
     return days;
   }, [viewYear, viewMonth, totalDays, firstDay, minDate, maxDate]);
 
-  const displayLabel = useMemo(() => {
-    return formatDateDisplay(effectiveDate);
-  }, [effectiveDate]);
+  const displayLabel = useMemo(() => formatDateDisplay(effectiveDate), [effectiveDate]);
 
   const isCustomDate = effectiveDate !== effectiveDefault;
 
@@ -201,7 +210,7 @@ export default function DatePicker({
 
           {/* Days Grid */}
           <div className={styles.daysGrid}>
-            {daysGrid.map((item) => {
+            {daysGrid.map(item => {
               if (item.empty) {
                 return <div key={item.key} className={`${styles.dayCell} ${styles.dayCellEmpty}`} />;
               }

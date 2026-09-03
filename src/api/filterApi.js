@@ -1,3 +1,10 @@
+/**
+ * @file filterApi.js
+ * @description API functions for fetching and computing cascading filter data.
+ * Includes plant-DC mapping, CBU lists, and date-range computation.
+ * Falls back to computed mock data if the API is unavailable.
+ */
+
 import { initFilters, minDate, maxDate, currentStartDate, currentEndDate } from "../utils/constants";
 
 const ALL_PLANTS = [
@@ -27,32 +34,35 @@ const ALL_CBUS = [
   "VIM-500-24", "LIF-125-72", "CLO-150-48", "PON-50-144", "DOV-100-48", "SRF-500-24", "RIN-250-48"
 ];
 
-export const computeCascadingFilters = (payload = {}) => {
-  const selectedPlants = payload["Source Plan"] || payload.sendingPlant || [];
-  const selectedDcs = payload["DC"] || payload.receivingPlant || [];
-  const selectedCbus = payload["CBU"] || payload.CBU || [];
-
-  // Determine available DCs based on selected Source Plans
+function computeAvailableDcs(selectedPlants) {
   let availableDcs = [];
   if (selectedPlants.length > 0) {
-    selectedPlants.forEach((plant) => {
+    selectedPlants.forEach(plant => {
       const dcs = PLANT_DC_MAP[plant] || [];
       availableDcs.push(...dcs);
     });
-    availableDcs = Array.from(new Set(availableDcs));
   } else {
-    Object.values(PLANT_DC_MAP).forEach((dcs) => availableDcs.push(...dcs));
-    availableDcs = Array.from(new Set(availableDcs));
+    Object.values(PLANT_DC_MAP).forEach(dcs => availableDcs.push(...dcs));
   }
+  return Array.from(new Set(availableDcs));
+}
 
-  // Determine available Plants based on selected DCs
-  let availablePlants = ALL_PLANTS;
+function computeAvailablePlants(selectedDcs) {
   if (selectedDcs.length > 0) {
-    availablePlants = ALL_PLANTS.filter((plant) => {
+    return ALL_PLANTS.filter(plant => {
       const dcs = PLANT_DC_MAP[plant] || [];
-      return dcs.some((dc) => selectedDcs.includes(dc));
+      return dcs.some(dc => selectedDcs.includes(dc));
     });
   }
+  return ALL_PLANTS;
+}
+
+export const computeCascadingFilters = (payload = {}) => {
+  const selectedPlants = payload["Source Plan"] || payload.sendingPlant || [];
+  const selectedDcs = payload["DC"] || payload.receivingPlant || [];
+
+  const availableDcs = computeAvailableDcs(selectedPlants);
+  const availablePlants = computeAvailablePlants(selectedDcs);
 
   const filterDefs = [
     { label: "Source Plan", options: availablePlants },
@@ -71,7 +81,7 @@ export const computeCascadingFilters = (payload = {}) => {
   };
 };
 
-const isValidDateString = (str) => {
+const isValidDateString = str => {
   if (!str || typeof str !== "string") return false;
   if (str.includes("<") || str.includes(">") || str.toLowerCase().includes("doctype") || str.toLowerCase().includes("html")) {
     return false;
@@ -79,6 +89,17 @@ const isValidDateString = (str) => {
   const parsed = Date.parse(str);
   return !isNaN(parsed);
 };
+
+function extractMinDateValue(result) {
+  if (result.minDate) return result.minDate;
+  if (result.date) return result.date;
+  if (result.startDate) return result.startDate;
+  if (result.data?.minDate) return result.data.minDate;
+  if (result.data?.date) return result.data.date;
+  if (result.data?.startDate) return result.data.startDate;
+  if (typeof result === "string") return result;
+  return null;
+}
 
 export const fetchMinDate = async () => {
   try {
@@ -98,14 +119,7 @@ export const fetchMinDate = async () => {
     }
 
     const result = await response.json();
-    const minDateVal =
-      result.minDate ||
-      result.date ||
-      result.startDate ||
-      result.data?.minDate ||
-      result.data?.date ||
-      result.data?.startDate ||
-      (typeof result === "string" ? result : null);
+    const minDateVal = extractMinDateValue(result);
 
     if (isValidDateString(minDateVal)) {
       return String(minDateVal).trim();

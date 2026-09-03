@@ -1,4 +1,9 @@
-import React from "react";
+/**
+ * @file TableBadges.jsx
+ * @description Badge components for shipment table rows: priority badge with tooltip,
+ * fill badge, and status badge.
+ */
+
 import Tooltip from "@mui/material/Tooltip";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { pColors } from "../../utils/constants";

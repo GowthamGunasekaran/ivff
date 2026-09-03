@@ -1,3 +1,9 @@
+/**
+ * @file chartApi.js
+ * @description API functions for fetching chart trend data.
+ * Falls back to mock data from constants if the API is unavailable.
+ */
+
 import { chartsData } from "../utils/constants";
 
 export const fetchChartTrends = async (payload = {}) => {

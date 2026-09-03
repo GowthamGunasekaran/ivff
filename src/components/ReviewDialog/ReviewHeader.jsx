@@ -1,3 +1,9 @@
+/**
+ * @file ReviewHeader.jsx
+ * @description Header section for the review dialog showing KPI metrics,
+ * shipment details, and a close button.
+ */
+
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import styles from "./ReviewDialog.module.css";

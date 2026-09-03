@@ -1,3 +1,9 @@
+/**
+ * @file ReviewDialog.jsx
+ * @description Modal dialog for reviewing and confirming a shipment plan.
+ * Displays consolidated manifest and validation checks before dispatching.
+ */
+
 import { useState, useMemo } from "react";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
@@ -57,6 +63,20 @@ function computeManifest(skus) {
   };
 }
 
+function computeBaseUtilNum(utilFrom) {
+  if (typeof utilFrom === "number") {
+    return utilFrom <= 1 ? utilFrom * 100 : utilFrom;
+  }
+  return parseFloat(utilFrom) || 88.0;
+}
+
+function computeFinalUtilNum(utilTo) {
+  if (typeof utilTo === "number") {
+    return utilTo <= 1 ? utilTo * 100 : utilTo;
+  }
+  return parseFloat(utilTo) || 92.6;
+}
+
 export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
   const { confirmAndDispatchPlan } = useAppContext();
   const [isDispatching, setIsDispatching] = useState(false);
@@ -69,12 +89,12 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
     if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0, loadCap: 100.0 };
 
     const capacityT = parseFloat(ind.weight) || 18.0;
-    const baseUtilNum = typeof ind.utilFrom === "number" ? (ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom) : (parseFloat(ind.utilFrom) || 88.0);
+    const baseUtilNum = computeBaseUtilNum(ind.utilFrom);
     const loadCap = 100.0; // Static 100% capacity cap
     const baseWeightT = (baseUtilNum / 100) * capacityT;
     const addedWeightT = manifestData.totalAddedT;
     const finalWeightT = baseWeightT + addedWeightT;
-    const finalUtil = typeof ind.utilTo === "number" ? (ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo) : (parseFloat(ind.utilTo) || metrics?.finalUtil || 92.6);
+    const finalUtil = computeFinalUtilNum(ind.utilTo);
 
     return {
       baseWeightT,
@@ -83,7 +103,7 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
       finalUtil,
       loadCap,
     };
-  }, [ind, manifestData, skus]);
+  }, [ind, manifestData]);
 
   if (!ind) return null;
 
