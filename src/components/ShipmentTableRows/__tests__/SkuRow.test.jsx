@@ -9,6 +9,7 @@ jest.mock('../ShipmentTableRows.module.css', () => ({
   skuCell: 'skuCell',
   skuId: 'skuId',
   skuDesc: 'skuDesc',
+  skuPlantCode: 'skuPlantCode',
   skuOrdQty: 'skuOrdQty',
   skuOrdQtySub: 'skuOrdQtySub',
   skuInputRecQty: 'skuInputRecQty',
@@ -27,6 +28,7 @@ describe('SkuRow Component', () => {
     Material: 'VIM-500-24',
     MaterialDescription: 'Vim Liquid 500ml',
     Shipment_Priority: 'High',
+    sourcePlant: 'U918',
     recQty: 0,
     eligible: 1000,
     maxElig: 1000,
@@ -35,6 +37,8 @@ describe('SkuRow Component', () => {
     netweight: '3.840',
     weight: 12,
     risk_flag: 'p1',
+    orderLossCases: 142,
+    msdnLossCases: 0,
   };
 
   const renderWithTable = (component) =>
@@ -44,12 +48,14 @@ describe('SkuRow Component', () => {
       </Table>
     );
 
-  it('renders SKU material ID, description, priority and eligible quantity', () => {
+  it('renders SKU material ID, description, actual source plant, priority and loss cases', () => {
     renderWithTable(<SkuRow sku={mockSku} highlight={false} onRecChange={jest.fn()} />);
 
     expect(screen.getByText('VIM-500-24')).toBeInTheDocument();
     expect(screen.getByText('Vim Liquid 500ml')).toBeInTheDocument();
+    expect(screen.getByText('U918')).toBeInTheDocument();
     expect(screen.getByText('P1')).toBeInTheDocument();
+    expect(screen.getByText('142 cs')).toBeInTheDocument();
     expect(screen.getByText('1,000')).toBeInTheDocument();
   });
 

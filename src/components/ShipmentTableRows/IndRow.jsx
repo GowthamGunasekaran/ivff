@@ -78,41 +78,65 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
           )}
         </div>
       </TableCell>
+      {/* 1. ACTUAL SOURCE PLANT */}
+      <TableCell className={styles.indCell} sx={{ width: COL.sourcePlant }}>
+        <span style={{ fontSize: 11, fontWeight: 600, color: "#5a6072" }}>
+          {ind.sendingPlantCode || ind.sourcePlant || "—"}
+        </span>
+      </TableCell>
+      {/* 2. PRIORITY */}
       <TableCell className={styles.indCell} sx={{ width: COL.priority }}>
         <span className={`${styles.indPriority} ${priorityClass}`}>{priority}</span>
       </TableCell>
+      {/* 3. ORDER LOSS CASES */}
+      <TableCell className={styles.indCell} sx={{ width: COL.orderLoss, textAlign: "center" }}>
+        <span style={{ fontSize: 11, color: "#5a6072" }}>—</span>
+      </TableCell>
+      {/* 4. MSDN LOSS CASES */}
+      <TableCell className={styles.indCell} sx={{ width: COL.msdnLoss, textAlign: "center" }}>
+        <span style={{ fontSize: 11, color: "#5a6072" }}>—</span>
+      </TableCell>
+      {/* 5. ORD QTY / CS / WT */}
       <TableCell className={styles.indCell} sx={{ width: COL.ordQty }}>
         <span className={styles.indOrdQty}>{totalOrdQty.toLocaleString()}</span>
         <span className={styles.indOrdQtySub}> / {totalOrdCs.toLocaleString()}cs /{weightDisplay}</span>
       </TableCell>
+      {/* 6. REC QTY / CS / WT */}
       <TableCell className={styles.indCell} sx={{ width: COL.recQty }}>
         <span className={isOverUtilized ? styles.indRecQtyOver : styles.indRecQty}>+{totalRecCs.toLocaleString()}cs</span>
         <span className={styles.indRecQtySub}> / +{totalRecT}T</span>
       </TableCell>
+      {/* 7. ELIG */}
       <TableCell className={styles.indCell} sx={{ width: COL.elig }}>
         <span className={styles.indOrdQty}>{totalElig.toLocaleString()}</span>
         <span className={styles.indOrdQtySub}> / {weightDisplay}</span>
       </TableCell>
+      {/* 8. TOTAL */}
       <TableCell className={styles.indCell} sx={{ width: COL.total }}>
         <span className={styles.indOrdQty}>{totalDisplay}</span>
       </TableCell>
-      <TableCell className={styles.indCell} sx={{ width: COL.status }} onClick={(e) => e.stopPropagation()}>
-        <StatusBadge status={status.toUpperCase()} />
-      </TableCell>
-      <TableCell className={styles.indCell} sx={{ width: COL.actions, textAlign: "center" }} onClick={(e) => e.stopPropagation()}>
-        {(status.toUpperCase() === "ACCEPTED") && (
-          <Tooltip title={isOverUtilized ? tooltipMessage : ""} arrow placement="top">
-            <span>
-              <button
-                disabled={isOverUtilized}
-                onClick={() => !isOverUtilized && onReview(ind, dcLabel)}
-                className={`${styles.indBtnReview} ${isOverUtilized ? styles.indBtnReviewDisabled : ""}`}
-              >
-                Review
-              </button>
-            </span>
-          </Tooltip>
-        )}
+      {/* 9. STATUS / ACTION (COMBINED VERTICALLY) */}
+      <TableCell
+        className={styles.indCell}
+        sx={{ width: COL.statusAction, textAlign: "center", py: "4px" }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
+          <StatusBadge status={status.toUpperCase()} />
+          {status.toUpperCase() === "ACCEPTED" && (
+            <Tooltip title={isOverUtilized ? tooltipMessage : ""} arrow placement="top">
+              <span>
+                <button
+                  disabled={isOverUtilized}
+                  onClick={() => !isOverUtilized && onReview(ind, dcLabel)}
+                  className={`${styles.indBtnReview} ${isOverUtilized ? styles.indBtnReviewDisabled : ""}`}
+                >
+                  Review
+                </button>
+              </span>
+            </Tooltip>
+          )}
+        </div>
       </TableCell>
     </TableRow>
   );
@@ -126,8 +150,8 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
       <IndRowMain ind={ind} open={open} onToggle={onToggle} searchTerm={searchTerm} onReview={onReview} dcLabel={dcLabel} />
       {open && (
         <TableRow>
-          <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
-            <Table size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
+          <TableCell colSpan={12} sx={{ p: 0, border: "none" }}>
+            <Table size="small" sx={{ tableLayout: "fixed", minWidth: 1150 }}>
               <TableBody>
                 {skus.map((sku, si) => {
                   const skuId = sku.Material || sku.id || "";
@@ -148,7 +172,7 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
                   );
                 })}
                 <TableRow>
-                  <TableCell colSpan={10} className={styles.skuCellAdd}>
+                  <TableCell colSpan={12} className={styles.skuCellAdd}>
                     <button className={styles.skuBtnAdd}>
                       <AddIcon className={styles.skuIconAdd} /> Add CBU
                     </button>

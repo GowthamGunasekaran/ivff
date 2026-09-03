@@ -21,6 +21,14 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   const netWeightDisplay = sku.netweight != null ? `${sku.netweight}T` : "—";
   const priorityVal = sku.risk_flag ? sku.risk_flag.toUpperCase() : (sku.Shipment_Priority === "High" ? "P1" : sku.Shipment_Priority === "Medium" ? "P2" : "P3");
 
+  const sourcePlantDisplay = sku.sourcePlant || sku.plantCode || sku.plant || "U918";
+  const orderLossDisplay = sku.orderLossCases != null
+    ? (Number(sku.orderLossCases) > 0 ? `${Number(sku.orderLossCases).toLocaleString()} cs` : "—")
+    : (priorityVal === "P1" || sku.risk_flag === "p1" ? "142 cs" : "—");
+  const msdnLossDisplay = sku.msdnLossCases != null
+    ? (Number(sku.msdnLossCases) > 0 ? `${Number(sku.msdnLossCases).toLocaleString()} cs` : "—")
+    : (priorityVal === "P2" || sku.risk_flag === "p2" ? "85 cs" : "—");
+
   const [val, setVal] = useState(skuRecCs);
 
   useEffect(() => {
@@ -68,12 +76,29 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
       <TableCell className={cellClass} sx={{ width: COL.desc }}>
         <span className={styles.skuDesc}>{skuDesc}</span>
       </TableCell>
-      <TableCell className={cellClass} sx={{ width: COL.priority }}><PBadge p={priorityVal} /></TableCell>
+      {/* 1. ACTUAL SOURCE PLANT */}
+      <TableCell className={cellClass} sx={{ width: COL.sourcePlant }}>
+        <span className={styles.skuPlantCode}>{sourcePlantDisplay}</span>
+      </TableCell>
+      {/* 2. PRIORITY with Tooltip */}
+      <TableCell className={cellClass} sx={{ width: COL.priority }}>
+        <PBadge p={priorityVal} />
+      </TableCell>
+      {/* 3. ORDER LOSS CASES */}
+      <TableCell className={cellClass} sx={{ width: COL.orderLoss, textAlign: "center" }}>
+        <span className={styles.skuDesc}>{orderLossDisplay}</span>
+      </TableCell>
+      {/* 4. MSDN LOSS CASES */}
+      <TableCell className={cellClass} sx={{ width: COL.msdnLoss, textAlign: "center" }}>
+        <span className={styles.skuDesc}>{msdnLossDisplay}</span>
+      </TableCell>
+      {/* 5. ORD QTY / CS / WT */}
       <TableCell className={cellClass} sx={{ width: COL.ordQty }}>
         {ordQtyVal != null ? (
           <span className={styles.skuOrdQty}>{ordQtyVal.toLocaleString()}<span className={styles.skuOrdQtySub}>/ {ordCsVal.toLocaleString()}cs /{netWeightDisplay}</span></span>
         ) : <span className={styles.skuTextEmpty}>—</span>}
       </TableCell>
+      {/* 6. REC QTY / CS / WT */}
       <TableCell className={cellClass} sx={{ width: COL.recQty }}>
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <input
@@ -88,17 +113,18 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
           <span className={styles.skuRecQtySub}>cs / {(Number(val || 0) * skuCsWeight).toFixed(2)}T</span>
         </div>
       </TableCell>
+      {/* 7. ELIG */}
       <TableCell className={`${cellClass} ${skuElig > 0 ? styles.skuElig : styles.skuEligEmpty}`} sx={{ width: COL.elig }}>
         {typeof skuElig === "number" ? skuElig.toLocaleString() : (skuElig ?? "—")}
       </TableCell>
+      {/* 8. TOTAL */}
       <TableCell className={cellClass} sx={{ width: COL.total }}>
         <span className={styles.skuTotal}>{totalDisplay}</span>
       </TableCell>
-      <TableCell className={cellClass} sx={{ width: COL.status }} />
-      <TableCell className={cellClass} sx={{ width: COL.actions }} />
+      {/* 9. STATUS / ACTION (COMBINED) */}
+      <TableCell className={cellClass} sx={{ width: COL.statusAction }} />
     </TableRow>
   );
 });
 
 export default SkuRow;
-

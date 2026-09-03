@@ -1,9 +1,37 @@
+import React from "react";
+import Tooltip from "@mui/material/Tooltip";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { pColors } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
+const priorityTooltips = {
+  P1: "Material having order loss",
+  P2: "Material having MSDN loss",
+  P3: "High moving material",
+};
+
 export function PBadge({ p }) {
-  const c = pColors[p] || pColors.P3;
-  return <span className={styles.badgeP} style={{ background: c.bg, color: c.color }}>{p}</span>;
+  const normP = String(p || "").toUpperCase().trim();
+  const c = pColors[normP] || pColors.P3;
+  const tooltipText = priorityTooltips[normP];
+
+  return (
+    <div style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
+      <span className={styles.badgeP} style={{ background: c.bg, color: c.color }}>
+        {p || "NA"}
+      </span>
+      {tooltipText && (
+        <Tooltip title={tooltipText} arrow placement="top">
+          <span
+            style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }}
+            data-testid={`priority-info-${normP}`}
+          >
+            <InfoOutlinedIcon sx={{ fontSize: 13, color: "#8a90a0", "&:hover": { color: "#2c4cd3" } }} />
+          </span>
+        </Tooltip>
+      )}
+    </div>
+  );
 }
 
 export function FillBadge() {

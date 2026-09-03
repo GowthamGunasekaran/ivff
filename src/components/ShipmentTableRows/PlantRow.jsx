@@ -42,7 +42,7 @@ export const PlantRow = memo(function PlantRow({
             {openPlant ? <KeyboardArrowDownIcon className={styles.plantIconExpand} /> : <KeyboardArrowRightIcon className={styles.plantIconExpand} />}
           </IconButton>
         </TableCell>
-        <TableCell colSpan={9} className={styles.plantCell}>
+        <TableCell colSpan={11} className={styles.plantCell}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span className={styles.plantName}>{plant.name}</span>
             <span className={styles.plantLocation}>{plant.location}</span>
@@ -60,8 +60,8 @@ export const PlantRow = memo(function PlantRow({
 
       {openPlant && (
         <TableRow>
-          <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
-            <Table size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
+          <TableCell colSpan={12} sx={{ p: 0, border: "none" }}>
+            <Table size="small" sx={{ tableLayout: "fixed", minWidth: 1150 }}>
               <TableBody>
                 {dcs.map((dc) => {
                   const cacheKey = `${plant.id}_${dc.id}`;

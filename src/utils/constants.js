@@ -799,19 +799,34 @@ export const pColors = {
   P3: { bg: "#eef0f5", color: "#5a6072" },
 };
 
-export const COL = { expand: 20, shipment: 145, desc: 155, priority: 55, ordQty: 135, recQty: 130, elig: 68, total: 85, status: 85, actions: 72 };
+export const COL = {
+  expand: 24,
+  shipment: 135,
+  desc: 145,
+  sourcePlant: 95,
+  priority: 75,
+  orderLoss: 95,
+  msdnLoss: 95,
+  ordQty: 125,
+  recQty: 125,
+  elig: 65,
+  total: 80,
+  statusAction: 95,
+};
 
 export const HEADERS = [
   { label: "" },
   { label: "SHIPMENT / CBU" },
   { label: "DESCRIPTION" },
+  { label: "ACTUAL SOURCE PLANT" },
   { label: "PRIORITY" },
+  { label: "ORDER LOSS CASES" },
+  { label: "MSDN LOSS CASES" },
   { label: "ORD QTY / CS / WT" },
   { label: "REC QTY / CS / WT" },
   { label: "ELIG" },
   { label: "TOTAL" },
-  { label: "STATUS" },
-  { label: "ACTIONS" },
+  { label: "STATUS / ACTION" },
 ];
 
 /**

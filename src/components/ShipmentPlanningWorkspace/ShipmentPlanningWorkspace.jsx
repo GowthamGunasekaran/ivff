@@ -191,7 +191,7 @@ export default function ShipmentPlanningWorkspace() {
         )}
 
         <div className={styles.tableScrollArea}>
-          <Table stickyHeader size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
+          <Table stickyHeader size="small" sx={{ tableLayout: "fixed", minWidth: 1150 }}>
             <TableHead>
               <TableRow className={styles.tableHeaderRow}>
                 {HEADERS.map((h, i) => (

@@ -14,7 +14,7 @@ import styles from "./ShipmentTableRows.module.css";
 function DcLoadingState({ dcName }) {
   return (
     <TableRow sx={{ backgroundColor: "#fafbff", borderBottom: "1px solid #eceef3" }}>
-      <TableCell colSpan={10} sx={{ p: 2, textAlign: "center" }}>
+      <TableCell colSpan={12} sx={{ p: 2, textAlign: "center" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, color: "#2c4cd3", fontSize: 12 }}>
           <CircularProgress size={16} sx={{ color: "#2c4cd3" }} />
           <span>Loading shipments &amp; materials for {dcName}...</span>
@@ -27,7 +27,7 @@ function DcLoadingState({ dcName }) {
 function DcErrorState({ error, onRetry }) {
   return (
     <TableRow sx={{ backgroundColor: "#fff5f5", borderBottom: "1px solid #fed7d7" }}>
-      <TableCell colSpan={10} sx={{ p: 2, textAlign: "center" }}>
+      <TableCell colSpan={12} sx={{ p: 2, textAlign: "center" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 12, color: "#ef4b5c", fontSize: 12 }}>
           <span>{error}</span>
           <button
@@ -76,7 +76,7 @@ export const DcRow = memo(function DcRow({
             {openDc ? <KeyboardArrowDownIcon className={styles.dcIconExpand} /> : <KeyboardArrowRightIcon className={styles.dcIconExpand} />}
           </IconButton>
         </TableCell>
-        <TableCell colSpan={9} className={styles.dcCell}>
+        <TableCell colSpan={11} className={styles.dcCell}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 6 }}>
             <span className={styles.dcName}>{dc.dc}</span>
             <span className={styles.dcLocation}>{dc.location}</span>
@@ -87,14 +87,14 @@ export const DcRow = memo(function DcRow({
 
       {openDc && (
         <TableRow>
-          <TableCell colSpan={10} sx={{ p: 0, border: "none" }}>
-            <Table size="small" sx={{ tableLayout: "fixed", minWidth: 950 }}>
+          <TableCell colSpan={12} sx={{ p: 0, border: "none" }}>
+            <Table size="small" sx={{ tableLayout: "fixed", minWidth: 1150 }}>
               <TableBody>
                 {isLoading && <DcLoadingState dcName={dc.dc} />}
                 {!isLoading && error && <DcErrorState error={error} onRetry={() => onRetry && onRetry(plantId, dc.id)} />}
                 {!isLoading && !error && shipments.length === 0 && (
                   <TableRow sx={{ backgroundColor: "#fafbff", borderBottom: "1px solid #eceef3" }}>
-                    <TableCell colSpan={10} sx={{ p: 2, textAlign: "center", color: "#8a90a0", fontSize: 11 }}>
+                    <TableCell colSpan={12} sx={{ p: 2, textAlign: "center", color: "#8a90a0", fontSize: 11 }}>
                       No shipments found for {dc.dc}.
                     </TableCell>
                   </TableRow>

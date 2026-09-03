@@ -9,18 +9,25 @@ jest.mock('../ShipmentTableRows.module.css', () => ({
 }));
 
 describe('TableBadges Components', () => {
-  it('renders PBadge with P1, P2, P3 and fallback styles', () => {
+  it('renders PBadge with P1, P2, P3 and interactive tooltips', () => {
     const { rerender } = render(<PBadge p="P1" />);
     expect(screen.getByText('P1')).toBeInTheDocument();
+    expect(screen.getByTestId('priority-info-P1')).toBeInTheDocument();
 
     rerender(<PBadge p="P2" />);
     expect(screen.getByText('P2')).toBeInTheDocument();
+    expect(screen.getByTestId('priority-info-P2')).toBeInTheDocument();
 
     rerender(<PBadge p="P3" />);
     expect(screen.getByText('P3')).toBeInTheDocument();
+    expect(screen.getByTestId('priority-info-P3')).toBeInTheDocument();
 
-    rerender(<PBadge p="Unknown" />);
-    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    rerender(<PBadge p="NA" />);
+    expect(screen.getByText('NA')).toBeInTheDocument();
+    expect(screen.queryByTestId('priority-info-NA')).not.toBeInTheDocument();
+
+    rerender(<PBadge p="" />);
+    expect(screen.getByText('NA')).toBeInTheDocument();
   });
 
   it('renders FillBadge', () => {
