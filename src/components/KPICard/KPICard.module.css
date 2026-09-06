@@ -86,3 +86,37 @@
   white-space: nowrap;
   line-height: 22px;
 }
+.cardCentered {
+  align-items: center;
+}
+
+.cardHeaderCentered {
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.cardHeaderCentered .cardTitle {
+  text-align: center;
+}
+
+.metricsRowCentered {
+  justify-content: center;
+  width: 100%;
+}
+
+.metricItemCentered {
+  align-items: center;
+  text-align: center;
+  width: 100%;
+}
+
+.metricItemCentered .metricLabel {
+  text-align: center;
+}
+
+.metricItemCentered .metricValue {
+  text-align: center;
+  font-size: 19px;
+  line-height: 24px;
+}

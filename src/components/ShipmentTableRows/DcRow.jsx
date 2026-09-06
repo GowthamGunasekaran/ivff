@@ -85,7 +85,9 @@ export const DcRow = memo(function DcRow({
         <TableCell colSpan={11} className={styles.dcCell}>
           <div style={{ display: "flex", gap: 8, alignItems: "center", paddingLeft: 6 }}>
             <span className={styles.dcName}>{dc.dc}</span>
-            <span className={styles.dcLocation}>{dc.location}</span>
+            {dc.location && dc.location !== dc.dc && (
+              <span className={styles.dcLocation}>{dc.location}</span>
+            )}
             <span className={styles.dcLocation}>{dc.shipments} shipments</span>
           </div>
         </TableCell>

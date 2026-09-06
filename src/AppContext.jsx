@@ -2,374 +2,42 @@
  * @file AppContext.jsx
  * @description Global application context provider.
  * Manages all shared state: dates, filters, KPIs, charts, factories, shipment hierarchy,
- * search, and dispatching. Provides cascading filter updates and centralized inventory sync.
+ * search, and dispatching. Provides cascading filter updates, optimistic state sync,
+ * and centralized inventory tracking.
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
-import Snackbar from "@mui/material/Snackbar";
-import Alert from "@mui/material/Alert";
-import CircularProgress from "@mui/material/CircularProgress";
 import { fetchFilters, fetchMinDate } from "./api/filterApi";
 import { fetchKPIs } from "./api/kpiApi";
 import { fetchChartTrends } from "./api/chartApi";
 import { fetchFactoryInventory } from "./api/factoryApi";
-import { fetchPlantHierarchy, fetchShipmentDetails, updateShipmentPlan, searchShipmentsApi } from "./api/shipmentApi";
+import { fetchPlantHierarchy, fetchShipmentDetails, updateShipmentPlan } from "./api/shipmentApi";
+import { useShipmentSearch } from "./hooks/useShipmentSearch";
+import { FilterLoadingOverlay, FeedbackSnackbar } from "./components/AppContextOverlays";
+import {
+  resolveFactoryName,
+  buildGlobalEligible,
+  extractFactoryDetails,
+  normalizeShipment,
+  updateFactoryListInventory,
+  updateFactoryDetailsInventory,
+  syncPlantShipmentsCache,
+  updateFactoryEligibleFromRecords,
+  updateFactoryDetailsFromRecords,
+  resolveTargetShipment,
+  updateShipmentAcceptedStatus,
+  prepareDispatchPayload,
+  refreshDashboardAfterDispatch,
+  calculateRecMetrics,
+  buildInitialDashboardPayload,
+} from "./utils/appContextHelpers";
+
+// Re-export all helpers for seamless backward-compatibility
+export * from "./utils/appContextHelpers";
 
 const AppContext = createContext();
 
 export const useAppContext = () => useContext(AppContext);
-
-// Clean string helper for plant/factory matching
-function cleanEntityKey(str) {
-  return String(str || "")
-    .toLowerCase()
-    .replace(/plant/gi, "")
-    .replace(/u\d+/gi, "")
-    .replace(/[^a-z0-9]/gi, "")
-    .trim();
-}
-
-// Helper: Normalize plant name or id to match factory inventory key
-function resolveFactoryName(plantIdOrName, plantsList = [], factoriesList = []) {
-  if (!plantIdOrName) return "";
-  const query = String(plantIdOrName).toLowerCase().trim();
-  const queryBase = cleanEntityKey(query);
-
-  const plantObj = (plantsList || []).find(
-    p =>
-      (p.id && p.id.toLowerCase() === query) ||
-      (p.name && p.name.toLowerCase().trim() === query) ||
-      (p.id && cleanEntityKey(p.id) === queryBase) ||
-      (p.name && cleanEntityKey(p.name) === queryBase)
-  );
-  const candidateName = (plantObj ? plantObj.name : plantIdOrName).toLowerCase().trim();
-  const candidateBase = cleanEntityKey(candidateName);
-
-  const matched = (factoriesList || []).find(f => {
-    if (!f.name) return false;
-    const fn = f.name.toLowerCase().trim();
-    const fnBase = cleanEntityKey(fn);
-    return (
-      fn === candidateName ||
-      fn.includes(candidateName) ||
-      candidateName.includes(fn) ||
-      (candidateBase && fnBase && (fnBase === candidateBase || fnBase.includes(candidateBase) || candidateBase.includes(fnBase)))
-    );
-  });
-
-  if (matched) {
-    return matched.name;
-  }
-  if (plantObj) {
-    return plantObj.name;
-  }
-  return plantIdOrName;
-}
-
-// Helper: Get factory material map from global eligible state by name, id, or normalized key
-function getFactoryEligibleMap(factoryKey, eligibleMap) {
-  if (!factoryKey || !eligibleMap) return null;
-  if (eligibleMap[factoryKey]) return eligibleMap[factoryKey];
-
-  const targetBase = cleanEntityKey(factoryKey);
-  for (const k of Object.keys(eligibleMap)) {
-    const kBase = cleanEntityKey(k);
-    if (kBase && (kBase === targetBase || kBase.includes(targetBase) || targetBase.includes(kBase))) {
-      return eligibleMap[k];
-    }
-  }
-  return null;
-}
-
-// Helper: Look up material from global eligible map by code, id, or description
-function lookupMaterialRecord(factoryName, sku, eligibleMap) {
-  const fMap = getFactoryEligibleMap(factoryName, eligibleMap);
-  if (!fMap) return null;
-  const codeKey = (sku.Material || sku.code || sku.id || sku.cbu || sku.sku || "").toUpperCase().trim();
-  const descKey = (sku.MaterialDescription || sku.desc || sku.name || "").toUpperCase().trim();
-
-  if (codeKey && fMap[codeKey]) return fMap[codeKey];
-  if (descKey && fMap[descKey]) return fMap[descKey];
-
-  // Fuzzy match within this factory's materials
-  for (const mKey of Object.keys(fMap)) {
-    const rec = fMap[mKey];
-    const recCode = (rec.code || "").toUpperCase().trim();
-    const recName = (rec.name || "").toUpperCase().trim();
-    if (codeKey && recCode && (recCode === codeKey || recCode.includes(codeKey) || codeKey.includes(recCode))) {
-      return rec;
-    }
-    if (descKey && recName && (recName === descKey || recName.includes(descKey) || descKey.includes(recName))) {
-      return rec;
-    }
-  }
-  return null;
-}
-
-// Helper: Resolve numeric stock/avail value
-function resolveStockValue(m) {
-  if (typeof m.avail === "number") return m.avail;
-  if (typeof m.stock === "number") return m.stock;
-  const rawAvail = m.avail || m.stock || 0;
-  return parseFloat(String(rawAvail).replace(/,/g, "")) || 0;
-}
-
-// Helper: Construct global eligible map from factory inventory response
-function buildGlobalEligible(factoriesList) {
-  const state = {};
-  (factoriesList || []).forEach(f => {
-    const fName = f.name;
-    if (!state[fName]) state[fName] = {};
-    (f.children || []).forEach(m => {
-      const codeKey = (m.code || "").toUpperCase().trim();
-      const nameKey = (m.name || "").toUpperCase().trim();
-      const elig = typeof m.eligible === "number" ? m.eligible : parseFloat(String(m.eligible).replace(/,/g, "")) || 0;
-      const stock = resolveStockValue(m);
-
-      const record = {
-        factoryName: fName,
-        code: m.code,
-        name: m.name,
-        initialEligible: elig,
-        currentEligible: elig,
-        stock,
-      };
-      if (codeKey) state[fName][codeKey] = record;
-      if (nameKey && !state[fName][nameKey]) state[fName][nameKey] = record;
-    });
-  });
-  return state;
-}
-
-function extractFactoryDetails(factoryRes) {
-  if (!factoryRes) return { list: [], details: null };
-  const list = Array.isArray(factoryRes) ? factoryRes : factoryRes.data || factoryRes.initFactories || [];
-  if (factoryRes.initFactoryDetails) {
-    return { list, details: factoryRes.initFactoryDetails };
-  }
-  const details = {};
-  list.forEach(f => {
-    if (f.name && f.children) details[f.name] = f.children;
-  });
-  return { list, details };
-}
-
-// Helper: Resolve initial utilization value cleanly
-function resolveInitialUtil(ind) {
-  if (ind.initialUtil != null) return ind.initialUtil;
-  if (typeof ind.utilFrom === "number") {
-    return ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom;
-  }
-  return 88.0;
-}
-
-// Pure helper: Recalculates shipment metrics against static 100% capacity
-function recalcShipment(ind, children) {
-  let totalRecWeightT = 0;
-  children.forEach(c => {
-    totalRecWeightT += (parseFloat(c.recQty) || 0) * (c.csWeight || 0.004);
-  });
-  const capacityT = parseFloat(ind.truckCapacity || ind.weight) || 18.0;
-  const initialUtil = resolveInitialUtil(ind);
-  const addedUtilPercent = capacityT > 0 ? (totalRecWeightT / capacityT) * 100 : 0;
-  const finalUtilNum = parseFloat((initialUtil + addedUtilPercent).toFixed(1));
-
-  return {
-    ...ind,
-    truckCapacity: capacityT,
-    loadabilityCap: 100.0,
-    initialUtil,
-    utilFrom: initialUtil,
-    finalUtilNum,
-    utilTo: finalUtilNum,
-    isOverUtilized: finalUtilNum > 100.0,
-    remainingCap: parseFloat((100.0 - finalUtilNum).toFixed(1)),
-    addedWeightT: totalRecWeightT,
-    children,
-  };
-}
-
-// Pure function: Normalizes raw shipment data using centralized inventory
-function normalizeShipment(raw, factoryName = "", eligibleMap = null) {
-  const rawChildren = raw.children || [];
-  const children = rawChildren.map(c => {
-    const recQty = parseFloat(c.recQty) || 0;
-    const record = lookupMaterialRecord(factoryName, c, eligibleMap);
-    // CRITICAL: NEVER take eligible from shipment response (c.eligible).
-    // It MUST strictly come from the centralized factory inventory record!
-    const eligible = record ? record.currentEligible : 0;
-    const csWeight = (parseFloat(c.weight) || 4) / 1000;
-    const ordQty = Number(c.ord_qty) || 0;
-    const netweight = parseFloat(c.netweight) || 0;
-    const totalQty = ordQty + recQty;
-    const totalT = (netweight + recQty * csWeight).toFixed(2);
-
-    return {
-      ...c,
-      recQty,
-      baseRecQty: recQty,
-      eligible,
-      maxElig: eligible + recQty,
-      csWeight,
-      total: `${totalQty.toLocaleString()} / ${totalT}T`,
-    };
-  });
-
-  return recalcShipment({ ...raw, id: raw.shipmentId || raw.id, shipmentId: raw.shipmentId || raw.id }, children);
-}
-
-// Helper: Builds material match key from a SKU object
-function buildSkuMatchKeys(s) {
-  return {
-    sCode: (s.Material || s.id || s.code || s.cbu || s.sku || "").toUpperCase().trim(),
-    sDesc: (s.MaterialDescription || s.desc || s.name || "").toUpperCase().trim(),
-  };
-}
-
-function sumShipmentConsumedRec(ind, indId, skuIdx, isMatch) {
-  let sum = 0;
-  const children = ind.children || [];
-  for (let idx = 0; idx < children.length; idx++) {
-    const isTarget = ind.id === indId && idx === skuIdx;
-    if (!isTarget && isMatch(children[idx])) {
-      sum += parseFloat(children[idx].recQty) || 0;
-    }
-  }
-  return sum;
-}
-
-// Helper: Sums consumed recommended quantity across other shipments for the same material
-function calculateOtherConsumedRec(prevCache, plantId, indId, skuIdx, isMatch) {
-  let otherConsumedRec = 0;
-  for (const [k, shipments] of Object.entries(prevCache)) {
-    if (!k.startsWith(`${plantId}_`)) continue;
-    for (const ind of shipments) {
-      otherConsumedRec += sumShipmentConsumedRec(ind, indId, skuIdx, isMatch);
-    }
-  }
-  return otherConsumedRec;
-}
-
-// Helper: Updates factory list inventory with new remaining eligible quantity
-function updateFactoryListInventory(factories, resolvedFactoryName, isMatch, newRemainingEligible) {
-  return (factories || []).map(f => {
-    const fn = f.name;
-    const cleanFn = cleanEntityKey(fn);
-    const cleanTarget = cleanEntityKey(resolvedFactoryName);
-    const isTargetFactory =
-      fn === resolvedFactoryName ||
-      cleanFn === cleanTarget ||
-      (cleanFn && cleanTarget && (cleanFn.includes(cleanTarget) || cleanTarget.includes(cleanFn)));
-    if (!isTargetFactory) return f;
-
-    const updatedChildren = (f.children || []).map(m =>
-      isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
-    );
-    const newFactoryEligible = updatedChildren.reduce(
-      (sum, c) => sum + (typeof c.eligible === "number" ? c.eligible : parseFloat(c.eligible) || 0),
-      0
-    );
-    return {
-      eligible: newFactoryEligible,
-      ...f,
-      children: updatedChildren,
-    };
-  });
-}
-
-// Helper: Updates factory details mapping with new remaining eligible quantity
-function updateFactoryDetailsInventory(prevD, resolvedFactoryName, isMatch, newRemainingEligible) {
-  if (!prevD) return prevD;
-  const cleanTarget = cleanEntityKey(resolvedFactoryName);
-  const updatedD = { ...prevD };
-  for (const k of Object.keys(updatedD)) {
-    const kClean = cleanEntityKey(k);
-    if (k === resolvedFactoryName || kClean === cleanTarget) {
-      updatedD[k] = updatedD[k].map(m =>
-        isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
-      );
-    }
-  }
-  return updatedD;
-}
-
-// Helper: Synchronizes shipment cache and returns updated cache and target indentor
-function syncPlantShipmentsCache(prevCache, plantId, indId, skuIdx, isMatch, clampedVal, newRemainingEligible) {
-  let updatedTargetInd = null;
-  const newCache = {};
-
-  for (const [k, shipments] of Object.entries(prevCache)) {
-    if (!k.startsWith(`${plantId}_`)) {
-      newCache[k] = shipments;
-      continue;
-    }
-    newCache[k] = shipments.map(ind => {
-      let indChanged = false;
-      const updatedChildren = (ind.children || []).map((s, idx) => {
-        const isTarget = ind.id === indId && idx === skuIdx;
-        if (isTarget || isMatch(s)) {
-          indChanged = true;
-          const rec = isTarget ? clampedVal : (parseFloat(s.recQty) || 0);
-          const csW = s.csWeight || (parseFloat(s.weight) || 4) / 1000;
-          const ord = Number(s.ord_qty) || 0;
-          return {
-            ...s,
-            recQty: rec,
-            eligible: newRemainingEligible,
-            maxElig: rec + newRemainingEligible,
-            csWeight: csW,
-            total: `${(ord + rec).toLocaleString()} / ${(parseFloat(s.netweight || 0) + rec * csW).toFixed(2)}T`,
-          };
-        }
-        return s;
-      });
-
-      if (!indChanged) return ind;
-      const recalculated = recalcShipment(ind, updatedChildren);
-      if (ind.id === indId) updatedTargetInd = recalculated;
-      return recalculated;
-    });
-  }
-
-  return { newCache, updatedTargetInd };
-}
-
-// Helper: Checks whether any SKU in a shipment matches search term
-function shipmentMatchesTerm(ind, termLower) {
-  return (ind.children || []).some(s => {
-    const id = s.Material || s.id || "";
-    const desc = s.MaterialDescription || s.desc || "";
-    return id.toLowerCase().includes(termLower) || desc.toLowerCase().includes(termLower);
-  });
-}
-
-// Helper: Computes expand state for plants, DCs, and shipments based on search term
-function computeSearchExpandState(plantsData, dcShipmentsCache, debouncedSearchTerm) {
-  const newPlants = {};
-  const newDcs = {};
-  const newInds = {};
-  const termLower = debouncedSearchTerm.toLowerCase();
-
-  for (const plant of plantsData) {
-    let plantMatch = false;
-    for (const dc of plant.children || []) {
-      const cacheKey = `${plant.id}_${dc.id}`;
-      const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
-      let dcMatch = false;
-      for (const ind of shipments) {
-        if (shipmentMatchesTerm(ind, termLower)) {
-          newInds[ind.id] = true;
-          dcMatch = true;
-          plantMatch = true;
-        }
-      }
-      if (dcMatch) newDcs[dc.id] = true;
-    }
-    if (plantMatch) newPlants[plant.id] = true;
-  }
-
-  return { newPlants, newDcs, newInds };
-}
 
 export const AppProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -430,17 +98,28 @@ export const AppProvider = ({ children }) => {
     plantsDataRef.current = plantsData;
   }, [plantsData]);
 
-  // Search & Accordions
-  const [shipmentSearch, setShipmentSearch] = useState("");
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState("");
-  const [isSearchLoading, setIsSearchLoading] = useState(false);
-  const [searchResultsData, setSearchResultsData] = useState(null);
+  const dcShipmentsCacheRef = useRef(dcShipmentsCache);
+  useEffect(() => {
+    dcShipmentsCacheRef.current = dcShipmentsCache;
+  }, [dcShipmentsCache]);
 
-  const [openPlants, setOpenPlants] = useState({ delhi: true });
-  const [openDcs, setOpenDcs] = useState({});
-  const [openInds, setOpenInds] = useState({});
+  const reviewIndRef = useRef(null);
+  const reviewDcRef = useRef("");
   const [reviewInd, setReviewInd] = useState(null);
   const [reviewDc, setReviewDc] = useState("");
+
+  useEffect(() => {
+    reviewIndRef.current = reviewInd;
+  }, [reviewInd]);
+
+  useEffect(() => {
+    reviewDcRef.current = reviewDc;
+  }, [reviewDc]);
+
+  // Accordion Expand States
+  const [openPlants, setOpenPlants] = useState({ delhi: true, u036: true });
+  const [openDcs, setOpenDcs] = useState({ bndh: true });
+  const [openInds, setOpenInds] = useState({});
 
   const togglePlant = useCallback(id => {
     setOpenPlants(prev => (prev[id] ? {} : { [id]: true }));
@@ -449,6 +128,23 @@ export const AppProvider = ({ children }) => {
   const toggleInd = useCallback(id => {
     setOpenInds(p => ({ ...p, [id]: !p[id] }));
   }, []);
+
+  // Integrated shipment search and automated hierarchy expansion
+  const {
+    shipmentSearch,
+    setShipmentSearch,
+    debouncedSearchTerm,
+    isSearchLoading,
+    searchResultsData,
+    triggerCbuSearch,
+  } = useShipmentSearch({
+    plantsData,
+    dcShipmentsCache,
+    filters,
+    setOpenPlants,
+    setOpenDcs,
+    setOpenInds,
+  });
 
   // Core Helper: Fetch and cache shipments for a DC
   const fetchAndCacheDc = useCallback(async (plantId, dcId) => {
@@ -465,15 +161,20 @@ export const AppProvider = ({ children }) => {
         receivingPlant: dcId,
         CBU: curFilters?.CBU || [],
         class: curFilters?.class || "All",
-        fromDate: curFilters?.startDate || dateVal,
-        toDate: curFilters?.endDate || dateVal,
+        fromDate: dateVal,
+        toDate: dateVal,
       });
-      const rawShipments = Array.isArray(data) ? data : data.data || [];
       const resolvedFactoryName = resolveFactoryName(plantId, plantsDataRef.current, factoriesRef.current);
-      const shipments = rawShipments.map(raw =>
+      const shipments = (data || []).map(raw =>
         normalizeShipment(raw, resolvedFactoryName, globalEligibleRef.current)
       );
       setDcShipmentsCache(prev => ({ ...prev, [cacheKey]: shipments }));
+
+      // Synchronize factories and factoryDetails with updated remaining eligible from global eligible map
+      setFactories(prevF => updateFactoryEligibleFromRecords(prevF, resolvedFactoryName, globalEligibleRef.current));
+      setFactoryDetails(prevD => updateFactoryDetailsFromRecords(prevD, resolvedFactoryName, globalEligibleRef.current));
+
+      setGlobalEligibleState({ ...globalEligibleRef.current });
 
       const initialOpenInds = {};
       shipments.forEach(ind => { initialOpenInds[ind.id] = true; });
@@ -498,49 +199,31 @@ export const AppProvider = ({ children }) => {
     fetchAndCacheDc(plantId, dcId);
   }, [fetchAndCacheDc]);
 
-  // Live edit handler for SKU recommendation changes — synchronized with centralized global inventory
+  // Live edit handler for SKU recommendation changes — optimistic state synchronization with global inventory
   const handleRecChange = useCallback((plantId, dcId, indId, skuIdx, val) => {
     const resolvedFactoryName = resolveFactoryName(plantId, plantsDataRef.current, factoriesRef.current);
-    const targetCacheKey = `${plantId}_${dcId}`;
 
     setDcShipmentsCache(prev => {
-      const currentList = prev[targetCacheKey] || [];
-      const currentInd = currentList.find(ind => ind.id === indId);
-      if (!currentInd) return prev;
+      const metrics = calculateRecMetrics({
+        prevCache: prev,
+        plantId,
+        dcId,
+        indId,
+        skuIdx,
+        val,
+        resolvedFactoryName,
+        globalEligibleMap: globalEligibleRef.current,
+      });
+      if (!metrics) return prev;
 
-      const targetSku = currentInd.children?.[skuIdx];
-      if (!targetSku) return prev;
-
-      const codeKey = (targetSku.Material || targetSku.id || targetSku.code || targetSku.cbu || targetSku.sku || "").toUpperCase().trim();
-      const descKey = (targetSku.MaterialDescription || targetSku.desc || targetSku.name || "").toUpperCase().trim();
-      const isMatch = s => {
-        const { sCode, sDesc } = buildSkuMatchKeys(s);
-        return (codeKey && sCode === codeKey) || (descKey && sDesc === descKey);
-      };
-
-      const matRecord = lookupMaterialRecord(resolvedFactoryName, targetSku, globalEligibleRef.current);
-      const initialElig = matRecord ? matRecord.initialEligible : 0;
-
-      const otherConsumedRec = calculateOtherConsumedRec(prev, plantId, indId, skuIdx, isMatch);
-      const maxAllowed = Math.max(0, initialElig - otherConsumedRec);
-      const clampedVal = Math.max(0, Math.min(isNaN(Number(val)) ? 0 : Number(val), maxAllowed));
-      const newRemainingEligible = Math.max(0, initialElig - (otherConsumedRec + clampedVal));
-
-      if (targetSku.recQty === clampedVal && targetSku.eligible === newRemainingEligible) {
-        return prev;
-      }
-
-      // 1. Update global eligible map
+      const { matRecord, clampedVal, newRemainingEligible, isMatch } = metrics;
       if (matRecord) {
         matRecord.currentEligible = newRemainingEligible;
       }
       setGlobalEligibleState({ ...globalEligibleRef.current });
-
-      // 2. Remove consumed quantity from Factory Inventory table state
       setFactories(prevF => updateFactoryListInventory(prevF, resolvedFactoryName, isMatch, newRemainingEligible));
       setFactoryDetails(prevD => updateFactoryDetailsInventory(prevD, resolvedFactoryName, isMatch, newRemainingEligible));
 
-      // 3. Synchronize all shipments under this plant in dcShipmentsCache
       const { newCache, updatedTargetInd } = syncPlantShipmentsCache(
         prev,
         plantId,
@@ -571,80 +254,6 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
-  const confirmAndDispatchPlan = useCallback(async (ind, customManifest) => {
-    try {
-      const payload = {
-        shipmentId: ind.id,
-        status: "Accepted",
-        manifest: customManifest || ind.children || [],
-        finalUtil: ind.utilTo,
-      };
-      const result = await updateShipmentPlan(payload);
-      if (result.success !== false) {
-        showToast(`Shipment ${ind.id} successfully confirmed & dispatched!`, "success");
-        setReviewInd(null);
-        return true;
-      }
-      showToast(result.message || "Failed to update shipment plan", "error");
-      return false;
-    } catch (err) {
-      console.error("API 3 confirmAndDispatchPlan error:", err);
-      showToast(err.message || "Error confirming shipment plan", "error");
-      return false;
-    }
-  }, [showToast]);
-
-  // Search & Auto-expand debouncing
-  const triggerCbuSearch = useCallback(cbuCode => {
-    const term = (cbuCode || "").trim();
-    setShipmentSearch(term);
-    setDebouncedSearchTerm(term);
-  }, []);
-
-  useEffect(() => {
-    const handler = setTimeout(() => {
-      setDebouncedSearchTerm(shipmentSearch);
-    }, 250);
-    return () => clearTimeout(handler);
-  }, [shipmentSearch]);
-
-  useEffect(() => {
-    if (!debouncedSearchTerm || debouncedSearchTerm.trim().length < 2) {
-      setSearchResultsData(null);
-      setIsSearchLoading(false);
-      return undefined;
-    }
-
-    let isMounted = true;
-    const performSearch = async () => {
-      setIsSearchLoading(true);
-      try {
-        const results = await searchShipmentsApi(debouncedSearchTerm, {
-          sendingPlant: filters?.["Source Plan"] || [],
-          receivingPlant: filters?.["DC"] || [],
-          CBU: filters?.["CBU"] || [],
-        });
-        if (isMounted) setSearchResultsData(results);
-      } catch (err) {
-        console.error("Search API failed, will fallback to local traversal:", err);
-        if (isMounted) setSearchResultsData(null);
-      } finally {
-        if (isMounted) setIsSearchLoading(false);
-      }
-    };
-
-    performSearch();
-    return () => { isMounted = false; };
-  }, [debouncedSearchTerm, filters]);
-
-  useEffect(() => {
-    if (!debouncedSearchTerm || plantsData.length === 0) return;
-    const { newPlants, newDcs, newInds } = computeSearchExpandState(plantsData, dcShipmentsCache, debouncedSearchTerm);
-    setOpenPlants(p => ({ ...p, ...newPlants }));
-    setOpenDcs(p => ({ ...p, ...newDcs }));
-    setOpenInds(p => ({ ...p, ...newInds }));
-  }, [debouncedSearchTerm, plantsData, dcShipmentsCache]);
-
   // Shared Data Fetcher for initial load & cascading filters
   const fetchDashboardData = useCallback(async payload => {
     const [filtersRes, kpiRes, chartsRes, factoryRes, plantsRes] = await Promise.all([
@@ -671,6 +280,55 @@ export const AppProvider = ({ children }) => {
     }
     return filtersRes;
   }, []);
+
+  // API 3: Update / Confirm & Dispatch Shipment Plan with optimistic UI update and dashboard auto-refresh
+  const confirmAndDispatchPlan = useCallback(async (indOrId, customManifest, summaryPayload) => {
+    try {
+      const targetInd = resolveTargetShipment(
+        indOrId,
+        summaryPayload,
+        reviewIndRef.current,
+        dcShipmentsCacheRef.current
+      );
+
+      const { payload, shipmentId, finalUtilNum, selectedDate, curFilters } = prepareDispatchPayload({
+        indOrId,
+        targetInd,
+        summaryPayload,
+        customManifest,
+        filterContext: filterContextRef.current,
+        reviewDc: reviewDcRef.current,
+      });
+
+      // Optimistic update: snapshot previous cache, update local cache and close dialog immediately
+      const prevCacheSnapshot = dcShipmentsCacheRef.current;
+      setDcShipmentsCache(prev => {
+        const nextCache = {};
+        for (const [k, list] of Object.entries(prev)) {
+          nextCache[k] = updateShipmentAcceptedStatus(list, shipmentId, finalUtilNum);
+        }
+        return nextCache;
+      });
+      setReviewInd(null);
+
+      const result = await updateShipmentPlan(payload);
+
+      if (result.success !== false) {
+        await refreshDashboardAfterDispatch(fetchDashboardData, curFilters, selectedDate);
+        showToast(`Shipment ${shipmentId} successfully confirmed & dispatched!`, "success");
+        return true;
+      }
+
+      // Rollback on failure
+      setDcShipmentsCache(prevCacheSnapshot);
+      showToast(result.message || "Failed to update shipment plan", "error");
+      return false;
+    } catch (err) {
+      console.error("API 3 confirmAndDispatchPlan error:", err);
+      showToast(err.message || "Error confirming shipment plan", "error");
+      return false;
+    }
+  }, [showToast, fetchDashboardData]);
 
   // Cascading Filter Handler
   const applyFilters = useCallback(async newFilters => {
@@ -702,16 +360,7 @@ export const AppProvider = ({ children }) => {
         setIsLoading(true);
         const initialMinDate = await fetchMinDate();
         const defaultDateVal = initialMinDate || "2026-08-01";
-        const initialPayload = {
-          "Source Plan": [],
-          DC: [],
-          CBU: [],
-          date: defaultDateVal,
-          startDate: defaultDateVal,
-          endDate: defaultDateVal,
-          fromDate: defaultDateVal,
-          toDate: defaultDateVal,
-        };
+        const initialPayload = buildInitialDashboardPayload(defaultDateVal);
 
         const filtersRes = await fetchDashboardData(initialPayload);
         const resolvedMinDate = initialMinDate || filtersRes?.minDate || defaultDateVal;
@@ -726,6 +375,9 @@ export const AppProvider = ({ children }) => {
           startDate: defaultDateVal,
           endDate: defaultDateVal,
         });
+
+        // Pre-fetch default open plant & DC shipments
+        await fetchAndCacheDc("u036", "bndh");
       } catch (error) {
         console.error("Failed to load application data:", error);
       } finally {
@@ -733,7 +385,7 @@ export const AppProvider = ({ children }) => {
       }
     };
     loadAllData();
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, fetchAndCacheDc]);
 
   const value = useMemo(() => ({
     isLoading,
@@ -814,6 +466,7 @@ export const AppProvider = ({ children }) => {
     dcLoadingState,
     dcErrorState,
     shipmentSearch,
+    setShipmentSearch,
     triggerCbuSearch,
     debouncedSearchTerm,
     isSearchLoading,
@@ -844,55 +497,8 @@ export const AppProvider = ({ children }) => {
   return (
     <AppContext.Provider value={value}>
       {children}
-      {isFilterLoading && (
-        <div
-          style={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 9999,
-            backgroundColor: "rgba(255, 255, 255, 0.45)",
-            backdropFilter: "blur(2px)",
-            WebkitBackdropFilter: "blur(2px)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            transition: "opacity 0.2s ease-in-out",
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: 10,
-              padding: "16px 28px",
-              background: "rgba(255, 255, 255, 0.95)",
-              boxShadow: "0 8px 30px rgba(44, 76, 211, 0.15)",
-              borderRadius: 12,
-              border: "1px solid rgba(44, 76, 211, 0.15)",
-            }}
-          >
-            <CircularProgress size={30} thickness={4} sx={{ color: "#2c4cd3" }} />
-            <span style={{ fontSize: 13, fontWeight: 600, color: "#1f2430", letterSpacing: "0.2px" }}>
-              Updating Dashboard...
-            </span>
-          </div>
-        </div>
-      )}
-      <Snackbar
-        open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={closeSnackbar}
-        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
-      >
-        <Alert onClose={closeSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
-          {snackbar.message}
-        </Alert>
-      </Snackbar>
+      <FilterLoadingOverlay isFilterLoading={isFilterLoading} />
+      <FeedbackSnackbar snackbar={snackbar} onClose={closeSnackbar} />
     </AppContext.Provider>
   );
 };

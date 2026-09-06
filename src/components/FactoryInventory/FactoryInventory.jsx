@@ -64,7 +64,7 @@ function FactoryRow({ row, expanded, onToggle }) {
           </IconButton>
           <div>
             <div className={styles.rowName}>{row.name}</div>
-            <div className={styles.rowCode}>{row.code}</div>
+            <div className={styles.rowCode}>{row.code === row.name ? `Plant · ${row.code}` : row.code}</div>
           </div>
         </div>
       </TableCell>
@@ -92,8 +92,8 @@ function DetailRow({ detail }) {
   return (
     <TableRow sx={{ backgroundColor: "#ffffff", borderBottom: "1px solid #eceef3" }}>
       <TableCell sx={{ p: "6px 4px 6px 28px", border: "none" }}>
-        <div className={styles.detailName}>{detail.name || detail.material || detail.dc}</div>
-        <div className={styles.detailLocation}>{detail.code || detail.sku || detail.location || "SRF-500-24"}</div>
+        <div className={styles.detailName}>{detail.location || detail.name || detail.material || detail.dc}</div>
+        <div className={styles.detailLocation}>{detail.dc || detail.code || detail.sku || detail.location || "SRF-500-24"}</div>
         <div className={styles.progressBar}>
           <div className={styles.progressFill} style={{ width: `${percent}%` }} />
         </div>
@@ -114,6 +114,18 @@ function DetailRow({ detail }) {
   );
 }
 
+function resolveCbuBadge(filters) {
+  const cbu = filters?.CBU;
+  if (Array.isArray(cbu) && cbu.length > 0 && cbu[0] !== "All") {
+    return cbu[0];
+  }
+  const sourcePlan = filters?.["Source Plan"];
+  if (Array.isArray(sourcePlan) && sourcePlan.length > 0) {
+    return sourcePlan[0];
+  }
+  return "U918";
+}
+
 export default function FactoryInventory() {
   const { factories, factoryDetails, factoryExpanded, toggleFactory, filters } = useAppContext();
   const [anchorEl, setAnchorEl] = useState(null);
@@ -127,10 +139,7 @@ export default function FactoryInventory() {
     setAnchorEl(null);
   };
 
-  const cbuBadge =
-    filters?.CBU && Array.isArray(filters.CBU) && filters.CBU.length > 0 && filters.CBU[0] !== "All"
-      ? filters.CBU[0]
-      : "U918";
+  const cbuBadge = resolveCbuBadge(filters);
 
   // Dynamically calculate stock and eligible sums for all materials and plants
   const { factoriesList, displayTotalStock, displayTotalEligible } = useMemo(() => {

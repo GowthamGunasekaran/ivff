@@ -4,6 +4,7 @@
  * and a single date picker. Triggers cascading filter updates via app context.
  */
 
+import { useRef, useEffect } from "react";
 import TextField from "@mui/material/TextField";
 import Autocomplete from "@mui/material/Autocomplete";
 import Checkbox from "@mui/material/Checkbox";
@@ -27,6 +28,17 @@ function normalizeFilterValue(val) {
   return [];
 }
 
+function areFilterArraysEqual(arr1, arr2) {
+  const a = normalizeFilterValue(arr1);
+  const b = normalizeFilterValue(arr2);
+  if (a.length !== b.length) {
+    return false;
+  }
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((val, i) => val === sortedB[i]);
+}
+
 export default function FilterBar() {
   const {
     filters,
@@ -41,22 +53,45 @@ export default function FilterBar() {
     setCurrentEndDate,
   } = useAppContext();
 
+  const latestFiltersRef = useRef(filters);
+  useEffect(() => {
+    latestFiltersRef.current = filters;
+  }, [filters]);
+
+  const openDropdownsRef = useRef({});
+  const initialValuesRef = useRef({});
+
   if (!filterDefs || !filters) return null;
 
   const selectedDateVal = filters.date || filters.startDate || currentStartDate || defaultDate || "2026-08-01";
 
+  const handleDropdownOpen = label => {
+    openDropdownsRef.current[label] = true;
+    initialValuesRef.current[label] = normalizeFilterValue(latestFiltersRef.current?.[label]);
+  };
+
+  const handleDropdownClose = label => {
+    openDropdownsRef.current[label] = false;
+    const initial = initialValuesRef.current[label] || [];
+    const current = normalizeFilterValue(latestFiltersRef.current?.[label]);
+
+    if (!areFilterArraysEqual(initial, current)) {
+      initialValuesRef.current[label] = current;
+      applyFilters(latestFiltersRef.current);
+    }
+  };
+
   const handleDropdownChange = (label, newValue) => {
-    const currentVal = normalizeFilterValue(filters[label]);
+    const updated = { ...latestFiltersRef.current, [label]: newValue };
+    latestFiltersRef.current = updated;
+    setFilters(updated);
 
-    // Check if selection values actually changed before triggering API
-    const isSame =
-      currentVal.length === newValue.length &&
-      currentVal.every((val, i) => val === newValue[i]);
-
-    if (!isSame) {
-      const updated = { ...filters, [label]: newValue };
-      setFilters(updated);
-      applyFilters(updated);
+    const isOpen = !!openDropdownsRef.current[label];
+    if (!isOpen) {
+      const currentVal = normalizeFilterValue(filters[label]);
+      if (!areFilterArraysEqual(currentVal, newValue)) {
+        applyFilters(updated);
+      }
     }
   };
 
@@ -134,6 +169,8 @@ export default function FilterBar() {
             size="small"
             options={f.options}
             value={currentVal}
+            onOpen={() => handleDropdownOpen(f.label)}
+            onClose={() => handleDropdownClose(f.label)}
             onChange={(_, newValue) => handleDropdownChange(f.label, newValue)}
             renderOption={(props, option, { selected }) => {
               const { key, ...optionProps } = props;

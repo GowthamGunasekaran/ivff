@@ -23,14 +23,29 @@ export const fetchFactoryInventory = async (payload = {}) => {
   } catch (error) {
     console.warn("Error fetching factory inventory data, falling back to mock data:", error);
     const selectedPlants = payload["Source Plan"] || payload.sendingPlant || [];
+    const selectedDcs = payload["DC"] || payload.receivingPlant || [];
     let factories = [...initFactories];
 
     if (selectedPlants.length > 0) {
       factories = factories.filter(f =>
-        selectedPlants.some(sp => f.name.toLowerCase().includes(sp.toLowerCase()) || sp.toLowerCase().includes(f.name.toLowerCase()))
+        selectedPlants.some(sp =>
+          (f.name && f.name.toLowerCase().includes(sp.toLowerCase())) ||
+          (sp && sp.toLowerCase().includes(f.name.toLowerCase())) ||
+          (f.code && f.code.toLowerCase().includes(sp.toLowerCase())) ||
+          (sp && sp.toLowerCase().includes(f.code.toLowerCase()))
+        )
       );
     }
-    console.log(factories);
+    if (selectedDcs.length > 0) {
+      factories = factories.filter(f =>
+        (f.children || []).some(c =>
+          selectedDcs.some(sdc =>
+            (c.dc && c.dc.toLowerCase().includes(sdc.toLowerCase())) ||
+            (c.code && c.code.toLowerCase().includes(sdc.toLowerCase()))
+          )
+        )
+      );
+    }
     return factories;
   }
 };

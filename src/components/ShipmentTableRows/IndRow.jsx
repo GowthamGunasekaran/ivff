@@ -26,20 +26,26 @@ function getPriorityClass(priority, stylesObj) {
   return stylesObj.indPriorityLow;
 }
 
+function resolveBackendUtil(val) {
+  if (val == null) return null;
+  const num = typeof val === "number" ? val : parseFloat(val);
+  if (isNaN(num)) return null;
+  return num <= 1 ? num * 100 : num;
+}
+
 function resolveInitialUtil(ind) {
+  if (ind.baseUtilFrom != null) return ind.baseUtilFrom;
   if (ind.initialUtil != null) return ind.initialUtil;
-  if (typeof ind.utilFrom === "number") {
-    return ind.utilFrom <= 1 ? ind.utilFrom * 100 : ind.utilFrom;
-  }
-  return parseFloat(ind.utilFrom) || 88.0;
+  const resolved = resolveBackendUtil(ind.utilFrom) ?? resolveBackendUtil(ind.initial_utilization);
+  return resolved ?? 72.0;
 }
 
 function resolveFinalUtil(ind, initialUtil) {
   if (ind.finalUtilNum != null) return ind.finalUtilNum;
-  if (typeof ind.utilTo === "number") {
-    return ind.utilTo <= 1 ? ind.utilTo * 100 : ind.utilTo;
-  }
-  return parseFloat(ind.utilTo) || initialUtil;
+  const resolved = resolveBackendUtil(ind.utilTo) ?? resolveBackendUtil(ind.final_utilization);
+  if (resolved != null) return resolved;
+  if (ind.baseUtilTo != null) return ind.baseUtilTo;
+  return initialUtil;
 }
 
 function resolveWeightDisplay(ind, totalNetWeight) {
@@ -49,18 +55,39 @@ function resolveWeightDisplay(ind, totalNetWeight) {
   return "18T";
 }
 
+function resolveSkuCaseWeight(r) {
+  if (r.csWeight) {
+    return r.csWeight;
+  }
+  const netW = parseFloat(r.netweight ?? r.netWeight) || 0;
+  const csVal = parseFloat(r.cs) || parseFloat(r.ord_qty) || 0;
+  if (netW > 0 && csVal > 0) {
+    return netW / csVal;
+  }
+  const rawW = parseFloat(r.weight) || 0;
+  if (rawW <= 0) {
+    return 0.004;
+  }
+  if (rawW < 1) {
+    return rawW;
+  }
+  return rawW / 1000;
+}
+
 export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
   const skus = ind.children || [];
-  const priority = skus[0]?.Shipment_Priority || ind.priority || "Medium";
-  const status = skus[0]?.status || ind.status || "Accepted";
+  const priority = skus[0]?.priority || skus[0]?.Shipment_Priority || ind.priority || "Low";
+  const status = ind.status || skus[0]?.status || "Pending";
 
   const priorityClass = getPriorityClass(priority, styles);
 
-  const totalOrdQty = skus.reduce((s, r) => s + (Number(r.ord_qty) || 0), 0);
   const totalOrdCs = skus.reduce((s, r) => s + (Number(r.cs) || 0), 0);
   const totalNetWeight = skus.reduce((s, r) => s + (parseFloat(r.netweight) || 0), 0);
   const totalRecCs = skus.reduce((s, r) => s + (parseFloat(r.recQty) || 0), 0);
-  const totalRecT = skus.reduce((s, r) => s + (parseFloat(r.recQty) || 0) * (r.csWeight || ((parseFloat(r.weight) || 4) / 1000)), 0).toFixed(2);
+  const totalRecT = skus.reduce((s, r) => {
+    const csW = resolveSkuCaseWeight(r);
+    return s + (parseFloat(r.recQty) || 0) * csW;
+  }, 0).toFixed(3);
   const totalElig = skus.reduce((s, r) => s + (Number(r.eligible) || 0), 0);
 
   const initialUtilNum = resolveInitialUtil(ind);
@@ -71,10 +98,34 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const utilToFormatted = `${finalUtilNum.toFixed(1)}%`;
   const tooltipMessage = "The utilization should be 100%, it should not be beyond 100%";
 
-  const totalSumQty = totalOrdQty + totalRecCs;
-  const totalSumT = (totalNetWeight + parseFloat(totalRecT || 0)).toFixed(2);
-  const totalDisplay = (totalOrdQty > 0 || totalRecCs > 0) ? `${totalSumQty.toLocaleString()} / ${totalSumT}T` : "—";
+  const totalSumCs = totalOrdCs + totalRecCs;
+  const totalSumT = (totalNetWeight + parseFloat(totalRecT || 0)).toFixed(3);
+  const totalDisplay = (totalOrdCs > 0 || totalRecCs > 0 || totalNetWeight > 0) ? `${totalSumCs.toLocaleString()} / ${totalSumT}T` : "—";
   const weightDisplay = resolveWeightDisplay(ind, totalNetWeight);
+
+  const totalOrderLoss = skus.reduce((sum, r) => {
+    let val = 0;
+    if (r.order_loss_cases != null) {
+      val = Number(r.order_loss_cases) || 0;
+    } else if (r.orderLossCases != null) {
+      val = Number(r.orderLossCases) || 0;
+    } else if (r.priority === "P1" || r.risk_flag === "p1" || r.Shipment_Priority === "High") {
+      val = 142;
+    }
+    return sum + val;
+  }, 0);
+
+  const totalMsdnLoss = skus.reduce((sum, r) => {
+    let val = 0;
+    if (r.mstn_loss_mitigation_cases != null) {
+      val = Number(r.mstn_loss_mitigation_cases) || 0;
+    } else if (r.msdnLossCases != null) {
+      val = Number(r.msdnLossCases) || 0;
+    } else if (r.priority === "P2" || r.risk_flag === "p2" || r.Shipment_Priority === "Medium") {
+      val = 85;
+    }
+    return sum + val;
+  }, 0);
 
   return (
     <TableRow className={`${styles.indRow} ${isOverUtilized ? styles.indRowOverUtilized : ""}`} onClick={onToggle}>
@@ -106,7 +157,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       {/* 1. ACTUAL SOURCE PLANT */}
       <TableCell className={styles.indCell} sx={{ width: COL.sourcePlant }}>
         <span style={{ fontSize: 11, fontWeight: 600, color: "#5a6072" }}>
-          {ind.sendingPlantCode || ind.sourcePlant || "—"}
+          {ind.sendingPlantCode || ind.sourcePlant || skus[0]?.actual_source_plant_code || "—"}
         </span>
       </TableCell>
       {/* 2. PRIORITY */}
@@ -115,16 +166,20 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       </TableCell>
       {/* 3. ORDER LOSS CASES */}
       <TableCell className={styles.indCell} sx={{ width: COL.orderLoss, textAlign: "center" }}>
-        <span style={{ fontSize: 11, color: "#5a6072" }}>—</span>
+        <span style={{ fontSize: 11, color: "#5a6072" }}>
+          {totalOrderLoss > 0 ? `${Number(totalOrderLoss.toFixed(2)).toLocaleString()} cs` : "0"}
+        </span>
       </TableCell>
       {/* 4. MSDN LOSS CASES */}
       <TableCell className={styles.indCell} sx={{ width: COL.msdnLoss, textAlign: "center" }}>
-        <span style={{ fontSize: 11, color: "#5a6072" }}>—</span>
+        <span style={{ fontSize: 11, color: "#5a6072" }}>
+          {totalMsdnLoss > 0 ? `${Number(totalMsdnLoss.toFixed(2)).toLocaleString()} cs` : "0"}
+        </span>
       </TableCell>
-      {/* 5. ORD QTY / CS / WT */}
+      {/* 5. CS / WT */}
       <TableCell className={styles.indCell} sx={{ width: COL.ordQty }}>
-        <span className={styles.indOrdQty}>{totalOrdQty.toLocaleString()}</span>
-        <span className={styles.indOrdQtySub}> / {totalOrdCs.toLocaleString()}cs /{weightDisplay}</span>
+        <span className={styles.indOrdQty}>{totalOrdCs.toLocaleString()}cs</span>
+        <span className={styles.indOrdQtySub}> / {totalNetWeight.toFixed(3)}T</span>
       </TableCell>
       {/* 6. REC QTY / CS / WT */}
       <TableCell className={styles.indCell} sx={{ width: COL.recQty }}>
@@ -134,7 +189,6 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       {/* 7. ELIG */}
       <TableCell className={styles.indCell} sx={{ width: COL.elig }}>
         <span className={styles.indOrdQty}>{totalElig.toLocaleString()}</span>
-        <span className={styles.indOrdQtySub}> / {weightDisplay}</span>
       </TableCell>
       {/* 8. TOTAL */}
       <TableCell className={styles.indCell} sx={{ width: COL.total }}>
@@ -148,19 +202,17 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
       >
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 4 }}>
           <StatusBadge status={status.toUpperCase()} />
-          {status.toUpperCase() === "ACCEPTED" && (
-            <Tooltip title={isOverUtilized ? tooltipMessage : ""} arrow placement="top">
-              <span>
-                <button
-                  disabled={isOverUtilized}
-                  onClick={() => !isOverUtilized && onReview(ind, dcLabel)}
-                  className={`${styles.indBtnReview} ${isOverUtilized ? styles.indBtnReviewDisabled : ""}`}
-                >
-                  Review
-                </button>
-              </span>
-            </Tooltip>
-          )}
+          <Tooltip title={isOverUtilized ? tooltipMessage : ""} arrow placement="top">
+            <span>
+              <button
+                disabled={isOverUtilized}
+                onClick={() => !isOverUtilized && onReview(ind, dcLabel)}
+                className={`${styles.indBtnReview} ${isOverUtilized ? styles.indBtnReviewDisabled : ""}`}
+              >
+                Review
+              </button>
+            </span>
+          </Tooltip>
         </div>
       </TableCell>
     </TableRow>

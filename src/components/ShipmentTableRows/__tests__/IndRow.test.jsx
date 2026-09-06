@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
@@ -14,6 +13,7 @@ jest.mock('../ShipmentTableRows.module.css', () => ({
   indDescContent: 'indDescContent',
   indUtil: 'indUtil',
   indUtilOver: 'indUtilOver',
+  indUtilUnder: 'indUtilUnder',
   indUtilTarget: 'indUtilTarget',
   indInfoIconWrapper: 'indInfoIconWrapper',
   indInfoIcon: 'indInfoIcon',
@@ -130,5 +130,26 @@ describe('IndRow Component', () => {
     );
 
     expect(screen.getByText('105.0%')).toBeInTheDocument();
+  });
+
+  it('displays newly calculated final utilization dynamically even when baseUtilTo is present', () => {
+    const recalculatedInd = {
+      ...mockInd,
+      baseUtilTo: 72.0,
+      utilTo: 84.5,
+      final_utilization: 84.5,
+      finalUtilNum: 84.5,
+    };
+    renderWithTable(
+      <IndRowMain
+        ind={recalculatedInd}
+        open={false}
+        onToggle={jest.fn()}
+        onReview={jest.fn()}
+      />
+    );
+
+    expect(screen.getByText('84.5%')).toBeInTheDocument();
+    expect(screen.queryByText('72.0%')).not.toBeInTheDocument();
   });
 });

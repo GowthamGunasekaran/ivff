@@ -92,7 +92,7 @@ export const fetchShipmentDetails = async (params = {}) => {
   } catch (error) {
     console.warn("Error fetching shipment details (API 2), falling back to mock data:", error);
     const key = `${payload.sendingPlant}_${payload.receivingPlant}`;
-    return mockShipmentDetailsByDc[key] || [];
+    return mockShipmentDetailsByDc[key] || mockShipmentDetailsByDc[key.toLowerCase()] || mockShipmentDetailsByDc[key.toUpperCase()] || [];
   }
 };
 
@@ -116,6 +116,28 @@ export const updateShipmentPlan = async (payload = {}) => {
     return result.data || result;
   } catch (error) {
     console.warn("Error calling updateShipmentPlan API, falling back to local state sync:", error);
+    const shipId = payload.shipmentId || payload.shipment;
+    if (shipId && mockShipmentDetailsByDc) {
+      Object.values(mockShipmentDetailsByDc).forEach((shipList) => {
+        if (Array.isArray(shipList)) {
+          const found = shipList.find((s) => s.id === shipId || s.shipmentId === shipId);
+          if (found) {
+            found.status = payload.status || "Accepted";
+            if (payload.finalUtilization != null) {
+              found.utilTo = payload.finalUtilization;
+            }
+            if (Array.isArray(found.children)) {
+              found.children.forEach((c) => {
+                c.status = payload.status || "Accepted";
+                if (payload.finalUtilization != null) {
+                  c.final_utilization = payload.finalUtilization;
+                }
+              });
+            }
+          }
+        }
+      });
+    }
     return {
       success: true,
       message: "Shipment plan updated and dispatched successfully",

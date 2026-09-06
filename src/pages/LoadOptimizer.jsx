@@ -93,6 +93,7 @@ export default function LoadOptimizer() {
               icon={<ShieldIcon />}
               gradient={GRAD_AMBER}
               metrics={kpiData?.businessImpact || []}
+              centered
             />
             <KPICard
               title="Action Queue"

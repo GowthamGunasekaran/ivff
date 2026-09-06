@@ -8,26 +8,42 @@
 import { initFilters, minDate, maxDate, currentStartDate, currentEndDate } from "../utils/constants";
 
 const ALL_PLANTS = [
-  "Delhi Plant", "Chandigarh Plant", "Mumbai Plant", "Pune Plant", "Agra Plant",
-  "Kolkata Plant", "Chennai Plant", "Bengaluru Plant", "Hyderabad Plant",
-  "Ahmedabad Plant", "Jaipur Plant", "Lucknow Plant", "Indore Plant", "Kochi Plant"
+  "U036", "U652", "U918", "U925", "U976", "U993", "UHA", "UHJ", "UUB"
 ];
 
 const PLANT_DC_MAP = {
-  "Delhi Plant": ["Delhi DC", "Noida DC", "Chandigarh DC"],
-  "Chandigarh Plant": ["Chandigarh DC", "Amritsar DC"],
-  "Mumbai Plant": ["Mumbai DC", "Pune DC"],
-  "Pune Plant": ["Pune DC", "Nashik DC"],
-  "Agra Plant": ["Agra DC", "Mathura DC"],
-  "Kolkata Plant": ["Kolkata DC", "Howrah DC"],
-  "Chennai Plant": ["Chennai DC", "Coimbatore DC"],
-  "Bengaluru Plant": ["Bengaluru DC", "Mysuru DC"],
-  "Hyderabad Plant": ["Hyderabad DC", "Secunderabad DC"],
-  "Ahmedabad Plant": ["Ahmedabad DC", "Surat DC"],
-  "Jaipur Plant": ["Jaipur DC", "Jodhpur DC"],
-  "Lucknow Plant": ["Lucknow DC", "Kanpur DC"],
-  "Indore Plant": ["Indore DC", "Bhopal DC"],
-  "Kochi Plant": ["Kochi DC", "Trivandrum DC"],
+  "U036": ["BNDH", "BRCS1R4", "BRFE2R7", "BRFF2R0", "DGVA1R1", "F0583R2", "I2040R8"],
+  "U652": [
+    "ABDH", "RAIH", "VABH",
+    "CLPA3R2", "CLSQ100", "COMD5R9", "COMH2R0", "COML3R0", "COMM2R0", "CONH1R4",
+    "COQI100", "DVUG2R3", "DVUM1R1", "EALF2R8", "EALG2R5", "EMCP1R7", "RLQR1R1",
+    "RLQT1R1", "SEMF0R2", "SEMH0R1", "SKBF3R6", "SSPG3R5", "VILE3R3"
+  ],
+  "U918": [
+    "BNDH", "CB1H", "DLGH", "HBDH", "VABH",
+    "ABCA1R5", "DACL1R3", "DACN1R3", "DDCC1R2", "DTBD1R1", "DXCC1R9", "DXCN1R0",
+    "DXDE1R2", "DXDF1R9", "PRMZ1R0", "VILX1R6", "VILY3R2", "VIND100", "VINE100",
+    "VINH100", "VINH1R1", "VINI1R1", "VINJ1R1", "VINK1R1", "VINL1R1", "VINM1R1",
+    "VIOD1R1", "VIOE1R1"
+  ],
+  "U925": [
+    "PATH", "VNSH",
+    "HMYC1R3", "HMYE100", "JAKN4R5", "KJ1XPR3", "KSBSOR7", "KSRSQR0", "TKES3R9",
+    "TKEX1R4", "TKFD4R4"
+  ],
+  "U976": ["VABH", "VILB2R3", "VILJ2R4", "VIMI2R3", "VJAA1R8"],
+  "U993": [
+    "CUTH", "SHAH",
+    "COMG2R9", "COML3R0", "CONH1R4", "EAMA1R4", "PRMY1R1", "SEMH0R1", "SEND1R8",
+    "SEOF1R1", "VIKZ1R6", "VILB2R3", "VILJ2R4", "VILX1R6"
+  ],
+  "UHA": [
+    "DLGH",
+    "COMD5R9", "COMF2R0", "COMH2R0", "COMW2R0", "CONH1R4", "COOC1R2", "COOZ1R2",
+    "COQH100", "EMCP1R6", "RLQN1R0", "SEMT100", "SENB1R3", "SEOC1R4", "SEOQ100"
+  ],
+  "UHJ": ["HADH", "EALJ1R9", "PCLW1R3", "STFQ1R1"],
+  "UUB": ["JAMH", "NMAB3R0", "NMAC2R4", "NMAE1R4"],
 };
 
 const ALL_CBUS = [
@@ -36,22 +52,25 @@ const ALL_CBUS = [
 
 function computeAvailableDcs(selectedPlants) {
   let availableDcs = [];
-  if (selectedPlants.length > 0) {
+  if (selectedPlants && selectedPlants.length > 0) {
     selectedPlants.forEach(plant => {
-      const dcs = PLANT_DC_MAP[plant] || [];
+      const plantKey = Object.keys(PLANT_DC_MAP).find(k => k.toLowerCase() === String(plant).toLowerCase());
+      const dcs = (plantKey ? PLANT_DC_MAP[plantKey] : PLANT_DC_MAP[plant]) || [];
       availableDcs.push(...dcs);
     });
   } else {
     Object.values(PLANT_DC_MAP).forEach(dcs => availableDcs.push(...dcs));
   }
-  return Array.from(new Set(availableDcs));
+  return Array.from(new Set(availableDcs)).sort();
 }
 
 function computeAvailablePlants(selectedDcs) {
-  if (selectedDcs.length > 0) {
+  if (selectedDcs && selectedDcs.length > 0) {
     return ALL_PLANTS.filter(plant => {
       const dcs = PLANT_DC_MAP[plant] || [];
-      return dcs.some(dc => selectedDcs.includes(dc));
+      return dcs.some(dc =>
+        selectedDcs.some(sdc => sdc.toLowerCase() === dc.toLowerCase())
+      );
     });
   }
   return ALL_PLANTS;

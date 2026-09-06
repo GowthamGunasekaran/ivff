@@ -51,7 +51,9 @@ export const PlantRow = memo(function PlantRow({
         <TableCell colSpan={11} className={styles.plantCell}>
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <span className={styles.plantName}>{plant.name}</span>
-            <span className={styles.plantLocation}>{plant.location}</span>
+            {plant.location && plant.location !== plant.name && (
+              <span className={styles.plantLocation}>{plant.location}</span>
+            )}
             {plantBadges.map(b => (
               <span
                 key={b.label}

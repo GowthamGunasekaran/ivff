@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';

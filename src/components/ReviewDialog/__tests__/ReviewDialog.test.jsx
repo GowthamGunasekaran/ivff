@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ReviewDialog from '../ReviewDialog';
 import * as AppContextModule from '@/AppContext';

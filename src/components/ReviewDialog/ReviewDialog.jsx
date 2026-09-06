@@ -14,6 +14,20 @@ import ReviewManifest from "./ReviewManifest";
 import ReviewValidation from "./ReviewValidation";
 import styles from "./ReviewDialog.module.css";
 
+function resolveCaseWeight(sku) {
+  if (sku.csWeight) {
+    return sku.csWeight;
+  }
+  const rawW = parseFloat(sku.weight) || 0;
+  if (rawW <= 0) {
+    return 0.004;
+  }
+  if (rawW < 1) {
+    return rawW;
+  }
+  return rawW / 1000;
+}
+
 /**
  * Optimistic Manifest & Metric Calculation
  * Computes manifest table rows, totals, and shipment weights in a single pass
@@ -31,9 +45,9 @@ function computeManifest(skus) {
     const origCs = Number(sku.cs) || Number(sku.ord_qty) || 0;
     const recCs = parseFloat(sku.recQty) || 0;
     const finalCs = origCs + recCs;
-    const csWeight = (parseFloat(sku.weight) || 4) / 1000;
+    const csWeight = resolveCaseWeight(sku);
     const weightKg = Math.round(finalCs * csWeight * 1000);
-    const tonnage = parseFloat((finalCs * csWeight).toFixed(2));
+    const tonnage = parseFloat((finalCs * csWeight).toFixed(3));
 
     totalFinal += finalCs;
     totalWeight += weightKg;
@@ -134,6 +148,10 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
       totalWeight: manifestData.totalWeight,
       totalTonnage: manifestData.totalTonnage,
       status: "ACCEPTED",
+      ind,
+      dcLabel,
+      metrics,
+      manifestData,
     };
 
     try {

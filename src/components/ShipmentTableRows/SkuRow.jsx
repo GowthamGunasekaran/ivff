@@ -12,24 +12,71 @@ import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
 function getPriorityVal(sku) {
-  if (sku.risk_flag) return sku.risk_flag.toUpperCase();
-  if (sku.Shipment_Priority === "High") return "P1";
-  if (sku.Shipment_Priority === "Medium") return "P2";
+  const raw = (sku.priority || sku.Shipment_Priority || (sku.risk_flag !== "NA" ? sku.risk_flag : "") || "").toUpperCase().trim();
+  if (raw === "HIGH" || raw === "P1") return "P1";
+  if (raw === "MEDIUM" || raw === "P2") return "P2";
+  if (raw === "LOW" || raw === "P3") return "P3";
   return "P3";
 }
 
 function getOrderLossDisplay(sku, priorityVal) {
-  if (sku.orderLossCases != null) {
-    return Number(sku.orderLossCases) > 0 ? `${Number(sku.orderLossCases).toLocaleString()} cs` : "—";
+  if (sku.order_loss_cases != null) {
+    const num = Number(sku.order_loss_cases);
+    return num > 0 ? `${num.toLocaleString()} cs` : "0";
   }
-  return (priorityVal === "P1" || sku.risk_flag === "p1") ? "142 cs" : "—";
+  if (sku.orderLossCases != null) {
+    const num = Number(sku.orderLossCases);
+    return num > 0 ? `${num.toLocaleString()} cs` : "0";
+  }
+  if (priorityVal === "P1" || sku.risk_flag === "p1") {
+    return "142 cs";
+  }
+  return "0";
 }
 
 function getMsdnLossDisplay(sku, priorityVal) {
-  if (sku.msdnLossCases != null) {
-    return Number(sku.msdnLossCases) > 0 ? `${Number(sku.msdnLossCases).toLocaleString()} cs` : "—";
+  if (sku.mstn_loss_mitigation_cases != null) {
+    const num = Number(sku.mstn_loss_mitigation_cases);
+    return num > 0 ? `${num.toLocaleString()} cs` : "0";
   }
-  return (priorityVal === "P2" || sku.risk_flag === "p2") ? "85 cs" : "—";
+  if (sku.msdnLossCases != null) {
+    const num = Number(sku.msdnLossCases);
+    return num > 0 ? `${num.toLocaleString()} cs` : "0";
+  }
+  if (priorityVal === "P2" || sku.risk_flag === "p2") {
+    return "85 cs";
+  }
+  return "0";
+}
+
+function resolveSkuWeight(sku) {
+  if (sku.csWeight) {
+    return sku.csWeight;
+  }
+  const netW = parseFloat(sku.netweight ?? sku.netWeight) || 0;
+  const csVal = parseFloat(sku.cs) || parseFloat(sku.ord_qty) || 0;
+  if (netW > 0 && csVal > 0) {
+    return netW / csVal;
+  }
+  const rawWeight = parseFloat(sku.weight) || 0;
+  if (rawWeight <= 0) {
+    return 0.004;
+  }
+  if (rawWeight < 1) {
+    return rawWeight;
+  }
+  return rawWeight / 1000;
+}
+
+function resolveMaxPool(sku, skuRecCs, skuElig) {
+  if (sku.maxElig != null && Number(sku.maxElig) > 0) {
+    return Number(sku.maxElig);
+  }
+  const sum = skuRecCs + skuElig;
+  if (sum > 0) {
+    return sum;
+  }
+  return 10000;
 }
 
 export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
@@ -39,16 +86,15 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   const skuId = sku.Material || "";
   const skuDesc = sku.MaterialDescription || "";
   const skuRecCs = parseFloat(sku.recQty) || 0;
-  const skuCsWeight = sku.csWeight || ((parseFloat(sku.weight) || 4) / 1000);
+  const skuCsWeight = resolveSkuWeight(sku);
   const skuElig = Number(sku.eligible) || 0;
-  const maxPool = sku.maxElig != null ? Number(sku.maxElig) : (skuRecCs + skuElig);
-  const ordQtyVal = Number(sku.ord_qty) || 0;
+  const maxPool = resolveMaxPool(sku, skuRecCs, skuElig);
   const ordCsVal = Number(sku.cs) || 0;
   const ordTVal = parseFloat(sku.netweight) || 0;
-  const netWeightDisplay = sku.netweight != null ? `${sku.netweight}T` : "—";
+  const netWeightDisplay = sku.netweight != null ? `${ordTVal.toFixed(3)}T` : "—";
   const priorityVal = getPriorityVal(sku);
 
-  const sourcePlantDisplay = sku.sourcePlant || sku.plantCode || sku.plant || "U918";
+  const sourcePlantDisplay = sku.actual_source_plant_code || sku.sourcePlant || sku.plantCode || sku.plant || "—";
   const orderLossDisplay = getOrderLossDisplay(sku, priorityVal);
   const msdnLossDisplay = getMsdnLossDisplay(sku, priorityVal);
 
@@ -82,10 +128,10 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
   };
 
   const numVal = isNaN(Number(val)) ? 0 : Number(val);
-  const totalQty = ordQtyVal + numVal;
+  const totalCases = ordCsVal + numVal;
   const totalTNum = ordTVal + numVal * skuCsWeight;
-  const totalT = totalTNum.toFixed(2);
-  const totalDisplay = ordQtyVal > 0 || numVal > 0 ? `${totalQty.toLocaleString()} / ${totalT}T` : "—";
+  const totalT = totalTNum.toFixed(3);
+  const totalDisplay = (ordCsVal > 0 || numVal > 0 || ordTVal > 0) ? `${totalCases.toLocaleString()} / ${totalT}T` : "—";
 
   return (
     <TableRow className={`${styles.skuRow} ${highlightClass}`}>
@@ -115,10 +161,10 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
       <TableCell className={cellClass} sx={{ width: COL.msdnLoss, textAlign: "center" }}>
         <span className={styles.skuDesc}>{msdnLossDisplay}</span>
       </TableCell>
-      {/* 5. ORD QTY / CS / WT */}
+      {/* 5. CS / WT */}
       <TableCell className={cellClass} sx={{ width: COL.ordQty }}>
-        {ordQtyVal != null ? (
-          <span className={styles.skuOrdQty}>{ordQtyVal.toLocaleString()}<span className={styles.skuOrdQtySub}>/ {ordCsVal.toLocaleString()}cs /{netWeightDisplay}</span></span>
+        {ordCsVal > 0 || ordTVal > 0 ? (
+          <span className={styles.skuOrdQty}>{ordCsVal.toLocaleString()}cs <span className={styles.skuOrdQtySub}>/ {netWeightDisplay}</span></span>
         ) : <span className={styles.skuTextEmpty}>—</span>}
       </TableCell>
       {/* 6. REC QTY / CS / WT */}
@@ -133,7 +179,7 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
             className={styles.skuInputRecQty}
             title={`Max eligible: ${maxPool.toLocaleString()}`}
           />
-          <span className={styles.skuRecQtySub}>cs / {(Number(val || 0) * skuCsWeight).toFixed(2)}T</span>
+          <span className={styles.skuRecQtySub}>cs / {(numVal * skuCsWeight).toFixed(3)}T</span>
         </div>
       </TableCell>
       {/* 7. ELIG */}

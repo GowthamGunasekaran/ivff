@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import FilterBar from '../FilterBar';
 import * as AppContextModule from '@/AppContext';
@@ -92,6 +91,50 @@ describe('FilterBar Component', () => {
     fireEvent.click(refreshBtn);
 
     expect(mockApplyFilters).toHaveBeenCalledWith(mockFilters);
+  });
+
+  it('defers applyFilters when selecting options until the dropdown is closed', () => {
+    render(<FilterBar />);
+    const sourcePlanInput = screen.getByRole('combobox', { name: 'Source Plan' });
+
+    // Open dropdown
+    fireEvent.click(sourcePlanInput);
+    fireEvent.keyDown(sourcePlanInput, { key: 'ArrowDown' });
+
+    // Option U920 should be visible
+    const optionU920 = screen.getByText('U920');
+    fireEvent.click(optionU920);
+
+    // setFilters is called immediately to update UI checkboxes
+    expect(mockSetFilters).toHaveBeenCalledWith(
+      expect.objectContaining({ 'Source Plan': ['U918', 'U920'] })
+    );
+
+    // But applyFilters should NOT be called yet while dropdown is open!
+    expect(mockApplyFilters).not.toHaveBeenCalled();
+
+    // Close dropdown (e.g., blur / escape / click outside)
+    fireEvent.keyDown(sourcePlanInput, { key: 'Escape' });
+
+    // Now applyFilters MUST be called once with the final selection
+    expect(mockApplyFilters).toHaveBeenCalledTimes(1);
+    expect(mockApplyFilters).toHaveBeenCalledWith(
+      expect.objectContaining({ 'Source Plan': ['U918', 'U920'] })
+    );
+  });
+
+  it('does not call applyFilters if dropdown is opened and closed without changes', () => {
+    render(<FilterBar />);
+    const sourcePlanInput = screen.getByRole('combobox', { name: 'Source Plan' });
+
+    // Open dropdown
+    fireEvent.click(sourcePlanInput);
+    fireEvent.keyDown(sourcePlanInput, { key: 'ArrowDown' });
+
+    // Close without changing anything
+    fireEvent.keyDown(sourcePlanInput, { key: 'Escape' });
+
+    expect(mockApplyFilters).not.toHaveBeenCalled();
   });
 
   it('returns null when filterDefs or filters are missing', () => {

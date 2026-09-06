@@ -13,23 +13,40 @@ const priorityTooltips = {
   P1: "Material having order loss",
   P2: "Material having MSDN loss",
   P3: "High moving material",
+  HIGH: "Material having order loss",
+  MEDIUM: "Material having MSDN loss",
+  LOW: "High moving material",
 };
+
+function resolveDisplayPriority(normP, fallback) {
+  if (normP === "HIGH" || normP === "P1") {
+    return "P1";
+  }
+  if (normP === "MEDIUM" || normP === "P2") {
+    return "P2";
+  }
+  if (normP === "LOW" || normP === "P3") {
+    return "P3";
+  }
+  return fallback || "NA";
+}
 
 export function PBadge({ p }) {
   const normP = String(p || "").toUpperCase().trim();
-  const c = pColors[normP] || pColors.P3;
-  const tooltipText = priorityTooltips[normP];
+  const displayP = resolveDisplayPriority(normP, p);
+  const c = pColors[displayP] || pColors[normP] || pColors.P3;
+  const tooltipText = priorityTooltips[displayP] || priorityTooltips[normP];
 
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 3 }}>
       <span className={styles.badgeP} style={{ background: c.bg, color: c.color }}>
-        {p || "NA"}
+        {displayP}
       </span>
       {tooltipText && (
         <Tooltip title={tooltipText} arrow placement="top">
           <span
             style={{ display: "inline-flex", alignItems: "center", cursor: "pointer" }}
-            data-testid={`priority-info-${normP}`}
+            data-testid={`priority-info-${displayP}`}
           >
             <InfoOutlinedIcon sx={{ fontSize: 13, color: "#8a90a0", "&:hover": { color: "#2c4cd3" } }} />
           </span>

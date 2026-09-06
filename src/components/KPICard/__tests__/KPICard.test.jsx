@@ -1,15 +1,18 @@
-import React from 'react';
 import { render, screen } from '@testing-library/react';
 import KPICard from '../KPICard';
 
 jest.mock('../KPICard.module.css', () => ({
   card: 'card',
+  cardCentered: 'cardCentered',
   cardHeader: 'cardHeader',
+  cardHeaderCentered: 'cardHeaderCentered',
   cardTitle: 'cardTitle',
   iconBox: 'iconBox',
   metricsRow: 'metricsRow',
+  metricsRowCentered: 'metricsRowCentered',
   metricDivider: 'metricDivider',
   metricItem: 'metricItem',
+  metricItemCentered: 'metricItemCentered',
   metricLabel: 'metricLabel',
   metricValue: 'metricValue',
 }));
@@ -55,5 +58,22 @@ describe('KPICard Component', () => {
 
     const cardDiv = container.firstChild;
     expect(cardDiv).toHaveStyle(`background: ${customGradient}`);
+  });
+
+  it('renders centered layout when centered is true or single metric provided', () => {
+    const singleMetric = [{ label: 'Order Loss Prevented', value: '₹2.0L' }];
+    render(
+      <KPICard
+        title="Business Impact"
+        iconBg="#fbeaa9"
+        icon={<span data-testid="impact-icon">Impact</span>}
+        metrics={singleMetric}
+        centered
+      />
+    );
+
+    expect(screen.getByText('Business Impact')).toBeInTheDocument();
+    expect(screen.getByText('Order Loss Prevented')).toBeInTheDocument();
+    expect(screen.getByText('₹2.0L')).toBeInTheDocument();
   });
 });
