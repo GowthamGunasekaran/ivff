@@ -116,21 +116,24 @@ export const updateShipmentPlan = async (payload = {}) => {
     return result.data || result;
   } catch (error) {
     console.warn("Error calling updateShipmentPlan API, falling back to local state sync:", error);
-    const shipId = payload.shipmentId || payload.shipment;
+    const shipId = Array.isArray(payload.Shipment)
+      ? payload.Shipment[0]
+      : (payload.shipmentId || payload.shipment || payload.Shipment);
     if (shipId && mockShipmentDetailsByDc) {
       Object.values(mockShipmentDetailsByDc).forEach((shipList) => {
         if (Array.isArray(shipList)) {
           const found = shipList.find((s) => s.id === shipId || s.shipmentId === shipId);
           if (found) {
             found.status = payload.status || "Accepted";
-            if (payload.finalUtilization != null) {
-              found.utilTo = payload.finalUtilization;
+            const finalUtil = payload.final_utilization ?? payload.finalUtilization;
+            if (finalUtil != null) {
+              found.utilTo = finalUtil;
             }
             if (Array.isArray(found.children)) {
               found.children.forEach((c) => {
                 c.status = payload.status || "Accepted";
-                if (payload.finalUtilization != null) {
-                  c.final_utilization = payload.finalUtilization;
+                if (finalUtil != null) {
+                  c.final_utilization = finalUtil;
                 }
               });
             }

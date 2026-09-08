@@ -56,7 +56,7 @@ function computeManifest(skus) {
 
     return {
       cbu: name,
-      material: sku.Material,
+      material: sku.Material || sku.material || sku.materialId,
       source,
       tag: isAi ? "AI" : "ORIGINAL",
       origQty: origCs > 0 ? origCs : "—",
@@ -65,6 +65,12 @@ function computeManifest(skus) {
       weight: weightKg,
       tonnage,
       isAi,
+      isEdited: Boolean(sku.isEdited || sku.userEdited),
+      isAdded: Boolean(sku.isAdded || sku.userAdded),
+      baseRecQty: sku.baseRecQty,
+      eligible: sku.eligible,
+      csWeight,
+      sku,
     };
   });
 
@@ -131,10 +137,16 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
       source: row.source,
       tag: row.tag,
       origQty: row.origQty === "—" ? null : row.origQty,
-      recQty: row.recQty === "—" ? null : row.recQty,
+      recQty: row.recQty === "—" ? 0 : row.recQty,
       final: row.final,
       weight: row.weight,
       tonnage: row.tonnage,
+      isEdited: row.isEdited,
+      isAdded: row.isAdded,
+      baseRecQty: row.baseRecQty,
+      eligible: row.eligible,
+      csWeight: row.csWeight,
+      sku: row.sku,
     }));
 
     const summaryPayload = {

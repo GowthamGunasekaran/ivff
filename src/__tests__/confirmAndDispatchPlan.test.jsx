@@ -78,6 +78,7 @@ describe('confirmAndDispatchPlan Payload and Auto-Refresh', () => {
           final_utilization: 85,
           status: 'Pending',
           priority: 'High',
+          isEdited: true,
         },
       ],
     };
@@ -96,45 +97,42 @@ describe('confirmAndDispatchPlan Payload and Auto-Refresh', () => {
 
     expect(result).toBe(true);
 
-    // 1. Verify updateShipmentPlan was called with the enhanced payload
+    // 1. Verify updateShipmentPlan was called with the exact payload requested
     expect(shipmentApi.updateShipmentPlan).toHaveBeenCalledTimes(1);
     const sentPayload = shipmentApi.updateShipmentPlan.mock.calls[0][0];
 
-    // Verify common root fields requested by user
-    expect(sentPayload.sendingPlant).toBe('U036');
-    expect(sentPayload.receivingPlant).toBe('BNDH');
+    // Verify top-level payload schema from reference image
+    expect(sentPayload['Source Plant']).toEqual(['U036']);
+    expect(sentPayload['DC']).toEqual(['BNDH']);
     expect(sentPayload.date).toBe('2026-08-01');
-    expect(sentPayload.dc).toBe('BNDH');
-    expect(sentPayload.selectedDate).toBe('2026-08-01');
-    expect(sentPayload.shipmentId).toBe('5543520673');
-    expect(sentPayload.status).toBe('Accepted');
-    expect(sentPayload.finalUtilization).toBe(85);
-    expect(sentPayload.totalCapacity).toBe(14);
-    expect(sentPayload.totalWeight).toBeCloseTo(4.152, 2); // 3.852 + 25 * 0.012 = 4.152
-    expect(sentPayload.totalCaseWeight).toBeCloseTo(0.3, 2); // 25 * 0.012 = 0.3
-    expect(sentPayload.totalCases).toBe(346); // 321 + 25
+    expect(sentPayload['Shipment']).toEqual(['5543520673']);
+    expect(sentPayload.final_utilization).toBe(85);
 
-    // Verify materials array
+    // Verify materials array structure
     expect(Array.isArray(sentPayload.materials)).toBe(true);
-    expect(Array.isArray(sentPayload.material)).toBe(true);
     expect(sentPayload.materials).toHaveLength(1);
     const matItem = sentPayload.materials[0];
-    expect(matItem.materialId).toBe('BRCS1R4');
-    expect(matItem.cbuId).toBe('BRCS1R4');
-    expect(matItem.materialDescription).toBe('BRU TRIPTI 200g RNS');
-    expect(matItem.recommendedQuantity).toBe(25);
-    expect(matItem.finalUtilization).toBe(85);
-    expect(matItem.initialUtilization).toBe(72);
-    expect(matItem.newEligibility).toBe(500);
-    expect(matItem.eligibleQuantity).toBe(500);
-    expect(matItem.totalCases).toBe(346);
-    expect(matItem.newTotalWeight).toBeCloseTo(4.152, 2);
-    expect(matItem.status).toBe('Accepted');
-    expect(matItem.cbuWeight).toBeCloseTo(0.012, 3);
-    expect(matItem.netWeight).toBeCloseTo(3.852, 3);
-    expect(matItem.totalWeight).toBeCloseTo(4.152, 2);
-    expect(matItem.totalCapacity).toBe(14);
-    expect(matItem.actualSourcePlant).toBe('U036');
+    expect(matItem.material).toBe('BRCS1R4');
+    expect(matItem.recommended_cases).toBe(25);
+    expect(matItem.recommended_cases_WT).toBeCloseTo(0.3, 2); // 25 * 0.012 = 0.3T
+    expect(matItem.eligible_stock_cases).toBe(500);
+
+    // Verify clean JSON serialization contains only the specified fields
+    const serialized = JSON.parse(JSON.stringify(sentPayload));
+    expect(Object.keys(serialized)).toEqual([
+      'Source Plant',
+      'DC',
+      'date',
+      'Shipment',
+      'final_utilization',
+      'materials',
+    ]);
+    expect(Object.keys(serialized.materials[0])).toEqual([
+      'material',
+      'recommended_cases',
+      'recommended_cases_WT',
+      'eligible_stock_cases',
+    ]);
 
     // 2. Verify dashboard refresh APIs were triggered after successful update
     // Note: initial mount calls them once, so after dispatch they should be called again (at least 2 times total)

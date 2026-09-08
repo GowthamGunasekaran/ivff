@@ -4,6 +4,7 @@ import {
   normalizeShipment,
   calculateRecMetrics,
   buildDispatchPayload,
+  isSkuAddedOrEdited,
 } from '../appContextHelpers';
 
 describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
@@ -154,88 +155,142 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
     });
   });
 
+  describe('isSkuAddedOrEdited', () => {
+    it('returns true when isEdited or isAdded flag is set', () => {
+      expect(isSkuAddedOrEdited({ isEdited: true })).toBe(true);
+      expect(isSkuAddedOrEdited({ userEdited: true })).toBe(true);
+      expect(isSkuAddedOrEdited({ isAdded: true })).toBe(true);
+    });
+
+    it('returns true when recQty differs from baseRecQty even if recQty is 0', () => {
+      expect(isSkuAddedOrEdited({ recQty: 0, baseRecQty: 10 })).toBe(true);
+      expect(isSkuAddedOrEdited({ recQty: 12, baseRecQty: 0 })).toBe(true);
+    });
+
+    it('returns false when recQty equals baseRecQty and no edit flag is present', () => {
+      expect(isSkuAddedOrEdited({ recQty: 10, baseRecQty: 10 })).toBe(false);
+      expect(isSkuAddedOrEdited({ recQty: 0, baseRecQty: 0 })).toBe(false);
+    });
+  });
+
   describe('buildDispatchPayload', () => {
     const mockTargetInd = {
-      id: 'SHP-99',
-      shipmentId: 'SHP-99',
-      sendingPlantCode: 'U036',
-      dc: 'BNDH',
+      id: 'SHIP1001',
+      shipmentId: 'SHIP1001',
+      sendingPlantCode: 'P101',
+      dc: 'DC201',
       children: [
         {
-          Material: 'MAT-ADDED',
+          Material: 'MAT1001',
           cs: 100,
           netweight: 1.2,
-          recQty: 50,
-          eligible: 200,
+          recQty: 12,
+          baseRecQty: 0,
+          eligible: 542,
           weight: 0.012,
-          initial_utilization: 72,
-          final_utilization: 84,
+          isEdited: true,
         },
         {
-          Material: 'MAT-ZERO',
+          Material: 'MAT1002',
           cs: 200,
           netweight: 2.4,
-          recQty: 0,
-          eligible: 100,
+          recQty: 8,
+          baseRecQty: 0,
+          eligible: 310,
           weight: 0.012,
-          initial_utilization: 72,
-          final_utilization: 84,
+          isEdited: true,
+        },
+        {
+          Material: 'MAT1003',
+          cs: 50,
+          netweight: 0.5,
+          recQty: 0,
+          baseRecQty: 10,
+          eligible: 175,
+          weight: 0.012,
+          isEdited: true,
+        },
+        {
+          Material: 'MAT1004-UNTOUCHED',
+          cs: 80,
+          netweight: 0.8,
+          recQty: 10,
+          baseRecQty: 10,
+          eligible: 200,
+          weight: 0.012,
         },
       ],
     };
 
-    it('filters materials to only include those where recommended quantity was added', () => {
+    it('includes only materials user added/edited with the exact schema from image', () => {
       const payload = buildDispatchPayload({
         targetInd: mockTargetInd,
-        shipmentId: 'SHP-99',
-        sendingPlant: 'U036',
-        receivingPlant: 'BNDH',
-        selectedDate: '2026-08-01',
-        truckCapacity: 14.0,
-        initialUtilNum: 72.0,
-        finalUtilNum: 84.0,
+        shipmentId: 'SHIP1001',
+        sendingPlant: 'P101',
+        receivingPlant: 'DC201',
+        selectedDate: '2026-09-08',
+        finalUtilNum: 87.5,
       });
 
-      expect(payload.sendingPlant).toBe('U036');
-      expect(payload.receivingPlant).toBe('BNDH');
-      expect(payload.date).toBe('2026-08-01');
+      expect(payload['Source Plant']).toEqual(['P101']);
+      expect(payload['DC']).toEqual(['DC201']);
+      expect(payload.date).toBe('2026-09-08');
+      expect(payload['Shipment']).toEqual(['SHIP1001']);
+      expect(payload.final_utilization).toBe(87.5);
 
-      // Only 1 material had recQty > 0
-      expect(payload.materials).toHaveLength(1);
-      const item = payload.materials[0];
-      expect(item.materialId).toBe('MAT-ADDED');
-      expect(item.recommendedQuantity).toBe(50);
-      expect(item.finalUtilization).toBeCloseTo(84.0, 1);
-      expect(item.initialUtilization).toBeCloseTo(72.0, 1);
-      expect(item.newEligibility).toBe(200);
-      expect(item.totalCases).toBe(150);
-      // 1.2 + 50 * 0.012 = 1.8T
-      expect(item.newTotalWeight).toBeCloseTo(1.8, 2);
-      expect(item.status).toBe('Accepted');
+      // Untouched material MAT1004 is excluded; only 3 edited materials included
+      expect(payload.materials).toHaveLength(3);
+
+      expect(payload.materials[0]).toEqual({
+        material: 'MAT1001',
+        recommended_cases: 12,
+        recommended_cases_WT: parseFloat((12 * 0.012).toFixed(3)),
+        eligible_stock_cases: 542,
+      });
+
+      expect(payload.materials[1]).toEqual({
+        material: 'MAT1002',
+        recommended_cases: 8,
+        recommended_cases_WT: parseFloat((8 * 0.012).toFixed(3)),
+        eligible_stock_cases: 310,
+      });
+
+      expect(payload.materials[2]).toEqual({
+        material: 'MAT1003',
+        recommended_cases: 0,
+        recommended_cases_WT: 0,
+        eligible_stock_cases: 175,
+      });
     });
 
-    it('serializes only common fields sendingPlant, receivingPlant, date, and materials via JSON.stringify', () => {
+    it('serializes exactly to the clean structure requested in the user reference image', () => {
       const payload = buildDispatchPayload({
         targetInd: mockTargetInd,
-        shipmentId: 'SHP-99',
-        sendingPlant: 'U036',
-        receivingPlant: 'BNDH',
-        selectedDate: '2026-08-01',
-        truckCapacity: 14.0,
-        initialUtilNum: 72.0,
-        finalUtilNum: 84.0,
+        shipmentId: 'SHIP1001',
+        sendingPlant: 'P101',
+        receivingPlant: 'DC201',
+        selectedDate: '2026-09-08',
+        finalUtilNum: 87.5,
       });
 
       const serialized = JSON.parse(JSON.stringify(payload));
       const rootKeys = Object.keys(serialized);
 
-      expect(rootKeys).toContain('sendingPlant');
-      expect(rootKeys).toContain('receivingPlant');
-      expect(rootKeys).toContain('date');
-      expect(rootKeys).toContain('materials');
-      expect(rootKeys).not.toContain('grossWeight');
-      expect(rootKeys).not.toContain('totalCaseWeight');
-      expect(rootKeys).not.toContain('totalCapacity');
+      expect(rootKeys).toEqual([
+        'Source Plant',
+        'DC',
+        'date',
+        'Shipment',
+        'final_utilization',
+        'materials',
+      ]);
+
+      expect(Object.keys(serialized.materials[0])).toEqual([
+        'material',
+        'recommended_cases',
+        'recommended_cases_WT',
+        'eligible_stock_cases',
+      ]);
     });
   });
 });

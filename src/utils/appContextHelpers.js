@@ -401,6 +401,8 @@ export function syncPlantShipmentsCache(prevCache, plantId, indId, skuIdx, isMat
             maxElig: rec + newRemainingEligible,
             csWeight: csW,
             total: `${totalCs.toLocaleString()} / ${totalT}T`,
+            isEdited: isTarget ? true : Boolean(s.isEdited),
+            userEdited: isTarget ? true : Boolean(s.userEdited),
           };
         }
         return s;
@@ -521,7 +523,30 @@ export function resolveTargetShipment(indOrId, summaryPayload, reviewInd, dcShip
   return allShipments.find(s => s?.id === indOrId || s?.shipmentId === indOrId) || null;
 }
 
-export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum, sendingPlant, initialUtilNum) {
+export function isSkuAddedOrEdited(sku) {
+  if (!sku) return false;
+  if (sku.isEdited || sku.userEdited || sku.isAdded || sku.userAdded || sku.added || sku.edited) {
+    return true;
+  }
+  if (sku.baseRecQty != null) {
+    const curRec = parseFloat(sku.recQty) || 0;
+    const baseRec = parseFloat(sku.baseRecQty) || 0;
+    return curRec !== baseRec;
+  }
+  if (sku.initialRecQty != null) {
+    const curRec = parseFloat(sku.recQty) || 0;
+    const initRec = parseFloat(sku.initialRecQty) || 0;
+    return curRec !== initRec;
+  }
+  if (sku.origRecQty != null) {
+    const curRec = parseFloat(sku.recQty) || 0;
+    const origRec = parseFloat(sku.origRecQty) || 0;
+    return curRec !== origRec;
+  }
+  return false;
+}
+
+export function buildDispatchMaterialItem(sku, idx) {
   const cbuId =
     sku.Material ||
     sku.material ||
@@ -530,78 +555,48 @@ export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum,
     sku.id ||
     sku.cbu ||
     `MAT-${idx + 1}`;
-  const description =
-    sku.MaterialDescription ||
-    sku.materialDescription ||
-    sku.description ||
-    sku.name ||
-    sku.cbu ||
-    cbuId;
-  const recQty = parseFloat(sku.recQty) || 0;
-  const eligQty =
-    parseFloat(sku.eligible) ||
-    parseFloat(sku.eligibleQuantity) ||
-    parseFloat(sku.newEligibility) ||
-    0;
-  const ordCs =
-    Number(sku.cs) ||
-    Number(sku.ord_qty) ||
-    Number(sku.origQty) ||
-    0;
-  const totalCs = ordCs + recQty;
+
+  const recCases = parseFloat(sku.recQty ?? sku.recommended_cases ?? sku.recommendedQuantity) || 0;
+  const eligCases = parseFloat(
+    sku.eligible ??
+    sku.eligible_stock_cases ??
+    sku.eligibleQuantity ??
+    sku.newEligibility
+  ) || 0;
 
   const csWeight = resolveItemCaseWeight(sku);
-  const netWeight =
-    parseFloat(sku.netweight) ||
-    parseFloat(sku.netWeight) ||
-    ordCs * csWeight;
-  const addedWeight = recQty * csWeight;
-  const totalWeight = parseFloat((netWeight + addedWeight).toFixed(4));
-  const matCapacity =
-    parseFloat(sku.capcity) ||
-    parseFloat(sku.capacity) ||
-    parseFloat(sku.cap) ||
-    truckCapacity;
-  const matFinalUtil = resolveSkuUtilization(sku.final_utilization, finalUtilNum);
-  const matInitialUtil = resolveSkuUtilization(sku.initial_utilization, initialUtilNum);
+  const ordCs = Number(sku.cs) || Number(sku.ord_qty) || Number(sku.origQty) || 0;
+  const netWeight = parseFloat(sku.netweight || sku.netWeight || (ordCs * csWeight)) || 0;
+  const addedWeight = recCases * csWeight;
+  const totalCs = ordCs + recCases;
+
+  const recCasesWT = sku.recommended_cases_WT != null
+    ? parseFloat(sku.recommended_cases_WT)
+    : (sku.recWeight != null
+      ? parseFloat(sku.recWeight)
+      : (recCases === 0 ? 0 : parseFloat(addedWeight.toFixed(3))));
+
+  const item = {
+    material: cbuId,
+    recommended_cases: recCases,
+    recommended_cases_WT: recCasesWT,
+    eligible_stock_cases: eligCases,
+  };
+
+  // Non-enumerable properties for backward-compatibility with tests/helpers
+  Object.defineProperties(item, {
+    materialId: { get: () => cbuId, enumerable: false },
+    cbuId: { get: () => cbuId, enumerable: false },
+    recommendedQuantity: { get: () => recCases, enumerable: false },
+    newEligibility: { get: () => eligCases, enumerable: false },
+    eligibleQuantity: { get: () => eligCases, enumerable: false },
+    totalCases: { get: () => totalCs, enumerable: false },
+    newTotalWeight: { get: () => parseFloat((netWeight + addedWeight).toFixed(3)), enumerable: false },
+    status: { get: () => "Accepted", enumerable: false },
+  });
 
   return {
-    item: {
-      materialId: cbuId,
-      recommendedQuantity: recQty,
-      finalUtilization: matFinalUtil,
-      initialUtilization: matInitialUtil,
-      newEligibility: eligQty,
-      totalCases: totalCs,
-      newTotalWeight: parseFloat(totalWeight.toFixed(3)),
-      status: "Accepted",
-
-      // Backward-compatibility properties
-      cbuId,
-      material: cbuId,
-      cbu: description || cbuId,
-      materialDescription: description,
-      description,
-      recQty,
-      eligibleQuantity: eligQty,
-      eligible: eligQty,
-      final_utilization: matFinalUtil,
-      initial_utilization: matInitialUtil,
-      cbuWeight: csWeight,
-      cbWeight: csWeight,
-      csWeight,
-      caseWeight: csWeight,
-      weight: csWeight,
-      netWeight: parseFloat(netWeight.toFixed(4)),
-      netweight: parseFloat(netWeight.toFixed(4)),
-      totalWeight,
-      totalCapacity: matCapacity,
-      capacity: matCapacity,
-      orderedCases: ordCs,
-      actualSourcePlant: sku.actual_source_plant_code || sendingPlant,
-      sourcePlant: sku.actual_source_plant_code || sendingPlant,
-      priority: sku.priority || sku.Shipment_Priority || "Low",
-    },
+    item,
     netWeight,
     addedWeight,
     totalCs,
@@ -615,74 +610,42 @@ export function buildDispatchPayload({
   sendingPlant,
   receivingPlant,
   selectedDate,
-  truckCapacity,
-  initialUtilNum,
   finalUtilNum,
 }) {
   const rawSkus =
     targetInd?.children ||
     (Array.isArray(customManifest) && customManifest.length > 0 ? customManifest : []);
 
-  // Include materials where user added / changed recommended quantity (or all if none specified)
-  const candidateSkus = (rawSkus || []).filter(sku => {
-    const curRec = parseFloat(sku.recQty) || 0;
-    const baseRec = parseFloat(sku.baseRecQty) || 0;
-    return curRec > 0 || (sku.baseRecQty != null && curRec !== baseRec);
-  });
-  const skusToInclude = candidateSkus.length > 0 ? candidateSkus : (rawSkus || []);
-
-  let overallOrderedWeight = 0;
-  let overallAddedWeight = 0;
-  let overallTotalCases = 0;
+  // Filter to materials that the user has added or edited
+  const candidateSkus = (rawSkus || []).filter(isSkuAddedOrEdited);
+  const skusToInclude = candidateSkus.length > 0
+    ? candidateSkus
+    : (rawSkus || []).filter(s => s.isEdited || s.userEdited || (s.baseRecQty == null && (parseFloat(s.recQty) || 0) > 0));
 
   const materialList = skusToInclude.map((sku, idx) => {
-    const { item, netWeight, addedWeight, totalCs } = buildDispatchMaterialItem(
-      sku,
-      idx,
-      truckCapacity,
-      finalUtilNum,
-      sendingPlant,
-      initialUtilNum
-    );
-    overallOrderedWeight += netWeight;
-    overallAddedWeight += addedWeight;
-    overallTotalCases += totalCs;
+    const { item } = buildDispatchMaterialItem(sku, idx);
     return item;
   });
 
-  const overallTotalWeight = parseFloat(
-    (overallOrderedWeight + overallAddedWeight).toFixed(4)
-  );
-  const overallGrossWeight = overallTotalWeight;
-  const overallCaseWeight = parseFloat(overallAddedWeight.toFixed(4));
-
   const payload = {
-    sendingPlant,
-    receivingPlant,
+    "Source Plant": Array.isArray(sendingPlant) ? sendingPlant : [sendingPlant],
+    DC: Array.isArray(receivingPlant) ? receivingPlant : [receivingPlant],
     date: selectedDate,
+    Shipment: Array.isArray(shipmentId) ? shipmentId : [shipmentId],
+    final_utilization: finalUtilNum,
     materials: materialList,
-    material: materialList,
   };
 
+  // Provide non-enumerable getters for backward compatibility if accessed as properties
   Object.defineProperties(payload, {
-    shipmentId: { value: shipmentId, enumerable: false, writable: true },
-    shipment: { value: shipmentId, enumerable: false, writable: true },
-    selectedDate: { value: selectedDate, enumerable: false, writable: true },
-    dc: { value: receivingPlant, enumerable: false, writable: true },
-    sourcePlant: { value: sendingPlant, enumerable: false, writable: true },
-    status: { value: "Accepted", enumerable: false, writable: true },
-    finalUtilization: { value: finalUtilNum, enumerable: false, writable: true },
-    finalUtil: { value: finalUtilNum, enumerable: false, writable: true },
-    initialUtilization: { value: initialUtilNum, enumerable: false, writable: true },
-    totalCapacity: { value: truckCapacity, enumerable: false, writable: true },
-    capacity: { value: truckCapacity, enumerable: false, writable: true },
-    totalWeight: { value: overallTotalWeight, enumerable: false, writable: true },
-    grossWeight: { value: overallGrossWeight, enumerable: false, writable: true },
-    totalCaseWeight: { value: overallCaseWeight, enumerable: false, writable: true },
-    caseWeight: { value: overallCaseWeight, enumerable: false, writable: true },
-    weight: { value: overallTotalWeight, enumerable: false, writable: true },
-    totalCases: { value: overallTotalCases, enumerable: false, writable: true },
-    manifest: { value: customManifest || materialList, enumerable: false, writable: true },
+    sendingPlant: { get: () => payload["Source Plant"][0], enumerable: false },
+    receivingPlant: { get: () => payload.DC[0], enumerable: false },
+    shipmentId: { get: () => payload.Shipment[0], enumerable: false },
+    shipment: { get: () => payload.Shipment[0], enumerable: false },
+    selectedDate: { get: () => payload.date, enumerable: false },
+    finalUtilization: { get: () => payload.final_utilization, enumerable: false },
+    material: { get: () => payload.materials, enumerable: false },
+    status: { get: () => "Accepted", enumerable: false },
   });
 
   return payload;
