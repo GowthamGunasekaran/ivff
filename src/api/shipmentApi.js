@@ -175,9 +175,12 @@ const factoryStockLookup = {
  */
 export const computeMockSearchResults = (term) => {
   const termLower = (term || "").toLowerCase().trim();
-  if (!termLower || termLower.length < 3) {
+  if (!termLower || termLower.length < 2) {
     return { term: term || "", results: [], totalShipments: 0, totalDcs: 0 };
   }
+
+  const codePart = termLower.split(" / ")[0].trim();
+  const descPart = termLower.includes(" / ") ? termLower.split(" / ")[1].trim() : "";
 
   const materialMap = {};
   let totalMatchingShipments = 0;
@@ -188,16 +191,23 @@ export const computeMockSearchResults = (term) => {
       let shipmentMatched = false;
       const skus = ind.children || [];
       skus.forEach((sku) => {
-        const id = sku.Material || sku.id || "";
-        const desc = sku.MaterialDescription || sku.desc || "";
-        if (id.toLowerCase().includes(termLower) || desc.toLowerCase().includes(termLower)) {
+        const id = (sku.Material || sku.id || "").toLowerCase();
+        const desc = (sku.MaterialDescription || sku.desc || "").toLowerCase();
+        if (
+          id === codePart ||
+          id.includes(codePart) ||
+          (descPart && desc.includes(descPart)) ||
+          desc.includes(codePart) ||
+          desc.includes(termLower)
+        ) {
           shipmentMatched = true;
           matchingDcs.add(dcKey);
 
-          if (!materialMap[id]) {
-            const stockInfo = factoryStockLookup[id] || { desc: desc || id, factoryStock: 10000 };
-            materialMap[id] = {
-              material: id,
+          const origId = sku.Material || sku.id || "";
+          if (!materialMap[origId]) {
+            const stockInfo = factoryStockLookup[origId] || { desc: sku.MaterialDescription || sku.desc || origId, factoryStock: 10000 };
+            materialMap[origId] = {
+              material: origId,
               materialDescription: desc || stockInfo.desc,
               allocated: 0,
               available: stockInfo.factoryStock,

@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { searchShipmentsApi } from "../api/shipmentApi";
 import { computeSearchExpandState } from "../utils/appContextHelpers";
+import { MATERIAL_CODE_DESC_MAP } from "../utils/constants";
 
 export function useShipmentSearch({ plantsData, dcShipmentsCache, filters, setOpenPlants, setOpenDcs, setOpenInds }) {
   const [shipmentSearch, setShipmentSearch] = useState("");
@@ -28,9 +29,21 @@ export function useShipmentSearch({ plantsData, dcShipmentsCache, filters, setOp
     return () => clearTimeout(handler);
   }, [shipmentSearch]);
 
-  // Execute remote search API when query is >= 2 characters
+  // Execute remote search API when query is >= 2 characters,
+  // EXCEPT when selecting/filtering by a material in UI (pure client-side filtering per user requirement)
   useEffect(() => {
     if (!debouncedSearchTerm || debouncedSearchTerm.trim().length < 2) {
+      return undefined;
+    }
+
+    const trimmed = debouncedSearchTerm.trim();
+    const isMaterialSearch =
+      trimmed.includes(" / ") ||
+      Boolean(MATERIAL_CODE_DESC_MAP[trimmed.toUpperCase()]);
+
+    if (isMaterialSearch) {
+      setIsSearchLoading(false);
+      setSearchResultsData(null);
       return undefined;
     }
 

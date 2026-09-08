@@ -4,7 +4,7 @@
  * Handles expand/collapse, loading states, error states, and renders IndRow children.
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -14,6 +14,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { IndRow } from "./IndRow";
+import { shipmentMatchesTerm } from "../../utils/appContextHelpers";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
@@ -74,9 +75,18 @@ export const DcRow = memo(function DcRow({
   error = null,
   onRetry,
 }) {
+  const displayedShipments = useMemo(() => {
+    if (!searchTerm || !searchTerm.trim()) return shipments;
+    return shipments.filter(ind => shipmentMatchesTerm(ind, searchTerm));
+  }, [shipments, searchTerm]);
+
   return (
     <>
-      <TableRow className={styles.dcRow} onClick={onToggleDc}>
+      <TableRow
+        className={styles.dcRow}
+        onClick={onToggleDc}
+        data-testid={`dc-row-${dc.id}`}
+      >
         <TableCell className={`${styles.dcCell} ${styles.dcCellExpand}`} sx={{ width: COL.expand }}>
           <IconButton size="small" sx={{ p: 0 }}>
             {openDc ? <KeyboardArrowDownIcon className={styles.dcIconExpand} /> : <KeyboardArrowRightIcon className={styles.dcIconExpand} />}
@@ -100,15 +110,15 @@ export const DcRow = memo(function DcRow({
               <TableBody>
                 {isLoading && <DcLoadingState dcName={dc.dc} />}
                 {!isLoading && error && <DcErrorState error={error} onRetry={() => onRetry && onRetry(plantId, dc.id)} />}
-                {!isLoading && !error && shipments.length === 0 && (
+                {!isLoading && !error && displayedShipments.length === 0 && (
                   <TableRow sx={{ backgroundColor: "#fafbff", borderBottom: "1px solid #eceef3" }}>
                     <TableCell colSpan={12} sx={{ p: 2, textAlign: "center", color: "#8a90a0", fontSize: 11 }}>
-                      No shipments found for {dc.dc}.
+                      {searchTerm ? `No shipments matching "${searchTerm}" in ${dc.dc}.` : `No shipments found for ${dc.dc}.`}
                     </TableCell>
                   </TableRow>
                 )}
-                {!isLoading && !error && shipments.length > 0 && (
-                  shipments.map((ind) => (
+                {!isLoading && !error && displayedShipments.length > 0 && (
+                  displayedShipments.map((ind) => (
                     <IndRow
                       key={ind.id}
                       ind={ind}

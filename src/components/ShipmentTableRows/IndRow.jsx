@@ -4,7 +4,7 @@
  * Handles expand/collapse to show SKU rows, utilization display, status badge, and review action.
  */
 
-import { memo } from "react";
+import { memo, useMemo } from "react";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -222,6 +222,29 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
 export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, dcLabel }) {
   const skus = ind.children || [];
 
+  const displayedSkus = useMemo(() => {
+    if (!searchTerm || !searchTerm.trim()) {
+      return skus.map((sku, originalIndex) => ({ sku, originalIndex }));
+    }
+    const cleanTerm = searchTerm.trim().toLowerCase();
+    const codePart = cleanTerm.split(" / ")[0].trim();
+    const descPart = cleanTerm.includes(" / ") ? cleanTerm.split(" / ")[1].trim() : "";
+
+    return skus
+      .map((sku, originalIndex) => ({ sku, originalIndex }))
+      .filter(({ sku }) => {
+        const skuId = (sku.Material || sku.material || sku.materialId || sku.id || "").toLowerCase();
+        const skuDesc = (sku.MaterialDescription || sku.materialDescription || sku.desc || sku.cbu || "").toLowerCase();
+        return (
+          skuId === codePart ||
+          skuId.includes(codePart) ||
+          (descPart && skuDesc.includes(descPart)) ||
+          skuDesc.includes(codePart) ||
+          skuDesc.includes(cleanTerm)
+        );
+      });
+  }, [skus, searchTerm]);
+
   return (
     <>
       <IndRowMain ind={ind} open={open} onToggle={onToggle} searchTerm={searchTerm} onReview={onReview} dcLabel={dcLabel} />
@@ -230,31 +253,26 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
           <TableCell colSpan={12} sx={{ p: 0, border: "none" }}>
             <Table size="small" sx={{ tableLayout: "fixed", minWidth: 1150 }}>
               <TableBody>
-                {skus.map((sku, si) => {
+                {displayedSkus.map(({ sku, originalIndex }) => {
                   const skuId = sku.Material || sku.id || "";
-                  const skuDesc = sku.MaterialDescription || sku.desc || "";
-                  const isHighlight = Boolean(
-                    searchTerm && (
-                      skuId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                      skuDesc.toLowerCase().includes(searchTerm.toLowerCase())
-                    )
-                  );
                   return (
                     <SkuRow
-                      key={skuId + si}
+                      key={skuId + originalIndex}
                       sku={sku}
-                      highlight={isHighlight}
-                      onRecChange={val => onRecChange && onRecChange(ind.id, si, val)}
+                      highlight={Boolean(searchTerm)}
+                      onRecChange={val => onRecChange && onRecChange(ind.id, originalIndex, val)}
                     />
                   );
                 })}
-                <TableRow>
-                  <TableCell colSpan={12} className={styles.skuCellAdd}>
-                    <button className={styles.skuBtnAdd}>
-                      <AddIcon className={styles.skuIconAdd} /> Add CBU
-                    </button>
-                  </TableCell>
-                </TableRow>
+                {!searchTerm && (
+                  <TableRow>
+                    <TableCell colSpan={12} className={styles.skuCellAdd}>
+                      <button className={styles.skuBtnAdd}>
+                        <AddIcon className={styles.skuIconAdd} /> Add CBU
+                      </button>
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </TableCell>

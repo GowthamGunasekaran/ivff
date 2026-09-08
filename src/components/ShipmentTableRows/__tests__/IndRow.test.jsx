@@ -152,4 +152,45 @@ describe('IndRow Component', () => {
     expect(screen.getByText('84.5%')).toBeInTheDocument();
     expect(screen.queryByText('72.0%')).not.toBeInTheDocument();
   });
+
+  it('filters child SKUs to only the searched material and preserves originalIndex for onRecChange', () => {
+    const multiSkuInd = {
+      ...mockInd,
+      children: [
+        {
+          Material: 'DACM1R4',
+          MaterialDescription: 'DMX TLT CLNR',
+          ord_qty: 100,
+          cs: 10,
+        },
+        {
+          Material: 'BRCS1R4',
+          MaterialDescription: 'BRU TRIPTI 200g RNS',
+          ord_qty: 200,
+          cs: 20,
+        },
+      ],
+    };
+    const handleRecChange = jest.fn();
+
+    renderWithTable(
+      <IndRow
+        ind={multiSkuInd}
+        open={true}
+        onToggle={jest.fn()}
+        onRecChange={handleRecChange}
+        searchTerm="BRCS1R4 / BRU TRIPTI 200g RNS"
+      />
+    );
+
+    // Only BRCS1R4 should be rendered
+    expect(screen.getByText('BRCS1R4')).toBeInTheDocument();
+    expect(screen.queryByText('DACM1R4')).not.toBeInTheDocument();
+    // Add CBU should be hidden
+    expect(screen.queryByText('Add CBU')).not.toBeInTheDocument();
+
+    // Changing the SKU rec qty passes originalIndex = 1 to onRecChange
+    fireEvent.click(screen.getByText('Change Sku'));
+    expect(handleRecChange).toHaveBeenCalledWith('SHP-12345', 1, 50);
+  });
 });

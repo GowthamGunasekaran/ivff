@@ -19,6 +19,7 @@ import { useAppContext } from "../../AppContext";
 import ReviewDialog from "../ReviewDialog/ReviewDialog";
 import SearchResultPanel from "../SearchResultPanel/SearchResultPanel";
 import { PlantRow } from "../ShipmentTableRows/ShipmentTableRows";
+import { getMaterialSearchOptions } from "../../utils/appContextHelpers";
 import { HEADERS, COL } from "../../utils/constants";
 import styles from "./ShipmentPlanningWorkspace.module.css";
 
@@ -69,12 +70,8 @@ export default function ShipmentPlanningWorkspace() {
   const [pageSize, setPageSize] = useState(10);
 
   const cbuOptions = useMemo(() => {
-    const def = filterDefs?.find((f) => f.label === "CBU");
-    if (def && Array.isArray(def.options) && def.options.length > 0) {
-      return def.options;
-    }
-    return DEFAULT_CBUS;
-  }, [filterDefs]);
+    return getMaterialSearchOptions(filterDefs, dcShipmentsCache);
+  }, [filterDefs, dcShipmentsCache]);
 
   const totalPlants = plants.length;
   const totalPages = Math.max(1, Math.ceil(totalPlants / pageSize));
@@ -87,7 +84,7 @@ export default function ShipmentPlanningWorkspace() {
     return plants.slice(startIndex, endIndex);
   }, [plants, startIndex, endIndex]);
 
-  const isSearching = isSearchLoading || Boolean(shipmentSearch && shipmentSearch.trim().length >= 3);
+  const isSearching = isSearchLoading || Boolean(shipmentSearch && shipmentSearch.trim().length >= 2);
 
   return (
     <div className={styles.workspaceContainer}>
@@ -98,7 +95,7 @@ export default function ShipmentPlanningWorkspace() {
           <span className={styles.plantBadge}>ALL PLANTS</span>
         </div>
 
-        {/* Search by CBU Code Dropdown on the right */}
+        {/* Search by CBU Code / Description Dropdown on the right */}
         <div className={styles.searchDropdownWrapper}>
           <Autocomplete
             size="small"
@@ -113,6 +110,9 @@ export default function ShipmentPlanningWorkspace() {
             }}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
+              const parts = option.split(" / ");
+              const code = parts[0];
+              const desc = parts.slice(1).join(" / ");
               return (
                 <li
                   key={key}
@@ -120,18 +120,23 @@ export default function ShipmentPlanningWorkspace() {
                   style={{
                     fontSize: 11,
                     padding: "6px 12px",
-                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                     color: "#1f2430",
                   }}
                 >
-                  {option}
+                  <span style={{ fontWeight: 700, color: "#2c4cd3" }}>{code}</span>
+                  {desc && (
+                    <span style={{ color: "#6b7280", fontWeight: 400 }}>/ {desc}</span>
+                  )}
                 </li>
               );
             }}
             renderInput={(params) => (
               <TextField
                 {...params}
-                placeholder="Search by CBU Code"
+                placeholder="Search by Material / Description"
                 size="small"
                 slotProps={{
                   input: {
@@ -177,8 +182,8 @@ export default function ShipmentPlanningWorkspace() {
               />
             )}
             sx={{
-              width: 260,
-              minWidth: 220,
+              width: 320,
+              minWidth: 260,
             }}
           />
         </div>
@@ -217,7 +222,7 @@ export default function ShipmentPlanningWorkspace() {
                   openInds={openInds}
                   onToggleInd={toggleInd}
                   onRecChange={handleRecChange}
-                  searchTerm={debouncedSearchTerm.length >= 3 ? debouncedSearchTerm : ""}
+                  searchTerm={debouncedSearchTerm ? debouncedSearchTerm.trim() : ""}
                   onReview={(ind, dcLabel) => { setReviewInd(ind); setReviewDc(dcLabel); }}
                   dcShipmentsCache={dcShipmentsCache}
                   dcLoadingState={dcLoadingState}

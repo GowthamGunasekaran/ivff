@@ -5,24 +5,33 @@
  */
 
 import CircularProgress from "@mui/material/CircularProgress";
+import { mockShipmentDetailsByDc } from "../../utils/constants";
 import styles from "./SearchResultPanel.module.css";
 
 function processShipmentSkus(ind, dcId, termLower, materialMap, dcs) {
   let shipmentMatched = false;
   const skus = ind.children || [];
+  const cleanTerm = termLower.trim();
+  const codePart = cleanTerm.split(" / ")[0].trim();
+  const descPart = cleanTerm.includes(" / ") ? cleanTerm.split(" / ")[1].trim() : "";
+
   for (const s of skus) {
-    const id = s.Material || s.id || "";
-    const desc = s.MaterialDescription || s.desc || "";
+    const id = (s.Material || s.id || "").toLowerCase();
+    const desc = (s.MaterialDescription || s.desc || "").toLowerCase();
     if (
-      id.toLowerCase().includes(termLower) ||
-      desc.toLowerCase().includes(termLower)
+      id === codePart ||
+      id.includes(codePart) ||
+      (descPart && desc.includes(descPart)) ||
+      desc.includes(codePart) ||
+      desc.includes(cleanTerm)
     ) {
       shipmentMatched = true;
       dcs.add(dcId);
-      if (!materialMap[id]) {
-        materialMap[id] = {
-          material: id,
-          materialDescription: desc || id,
+      const matKey = s.Material || s.id || id.toUpperCase();
+      if (!materialMap[matKey]) {
+        materialMap[matKey] = {
+          material: matKey,
+          materialDescription: s.MaterialDescription || s.desc || matKey,
           allocated: 0,
           available: 12000,
           shipmentsCount: 0,
@@ -30,9 +39,9 @@ function processShipmentSkus(ind, dcId, termLower, materialMap, dcs) {
         };
       }
       const alloc = (Number(s.ord_qty) || 0) + (parseFloat(s.recQty) || 0);
-      materialMap[id].allocated += alloc || 100;
-      materialMap[id].shipmentsCount += 1;
-      materialMap[id].dcsCount.add(dcId);
+      materialMap[matKey].allocated += alloc || 100;
+      materialMap[matKey].shipmentsCount += 1;
+      materialMap[matKey].dcsCount.add(dcId);
     }
   }
   return shipmentMatched;
@@ -47,7 +56,13 @@ function computeLocalSearchResults(data, dcShipmentsCache, displayTerm) {
   for (const plant of data) {
     for (const dc of plant.children || []) {
       const cacheKey = `${plant.id}_${dc.id}`;
-      const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
+      const shipments =
+        dc.children ||
+        dcShipmentsCache[cacheKey] ||
+        mockShipmentDetailsByDc?.[cacheKey] ||
+        mockShipmentDetailsByDc?.[cacheKey.toLowerCase()] ||
+        mockShipmentDetailsByDc?.[cacheKey.toUpperCase()] ||
+        [];
       for (const ind of shipments) {
         if (processShipmentSkus(ind, dc.id, termLower, materialMap, dcs)) {
           inds++;

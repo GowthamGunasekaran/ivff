@@ -5,6 +5,9 @@ import {
   calculateRecMetrics,
   buildDispatchPayload,
   isSkuAddedOrEdited,
+  getMaterialSearchOptions,
+  extractMaterialId,
+  shipmentMatchesTerm,
 } from '../appContextHelpers';
 
 describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
@@ -291,6 +294,41 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
         'recommended_cases_WT',
         'eligible_stock_cases',
       ]);
+    });
+  });
+
+  describe('Material Search Helpers', () => {
+    it('extractMaterialId extracts code from code / desc or returns raw string', () => {
+      expect(extractMaterialId('BRCS1R4 / BRU TRIPTI 200g RNS')).toBe('BRCS1R4');
+      expect(extractMaterialId('DACM1R4')).toBe('DACM1R4');
+      expect(extractMaterialId('')).toBe('');
+      expect(extractMaterialId(null)).toBe('');
+    });
+
+    it('getMaterialSearchOptions creates sorted list of code / desc options', () => {
+      const options = getMaterialSearchOptions([], {});
+      expect(Array.isArray(options)).toBe(true);
+      expect(options.length).toBeGreaterThan(0);
+      expect(options).toContain('BRCS1R4 / BRU TRIPTI 200g RNS');
+      expect(options).toContain('DACM1R4 / DMX TLT CLNR LIME FRESH 475ML');
+    });
+
+    it('shipmentMatchesTerm matches by material code or description', () => {
+      const ind = {
+        id: 'SHP-1',
+        children: [
+          {
+            Material: 'BRCS1R4',
+            MaterialDescription: 'BRU TRIPTI 200g RNS',
+          },
+        ],
+      };
+
+      expect(shipmentMatchesTerm(ind, 'BRCS1R4 / BRU TRIPTI 200g RNS')).toBe(true);
+      expect(shipmentMatchesTerm(ind, 'BRCS1R4')).toBe(true);
+      expect(shipmentMatchesTerm(ind, 'TRIPTI')).toBe(true);
+      expect(shipmentMatchesTerm(ind, 'NON_EXISTENT')).toBe(false);
+      expect(shipmentMatchesTerm(ind, '')).toBe(true);
     });
   });
 });

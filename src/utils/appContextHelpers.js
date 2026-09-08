@@ -5,6 +5,8 @@
  * recommendation tracking, cache synchronization, search expansion, and dispatch payload building.
  */
 
+import { MATERIAL_CODE_DESC_MAP, mockShipmentDetailsByDc } from "./constants";
+
 // Clean string helper for plant/factory matching
 export function cleanEntityKey(str) {
   return String(str || "")
@@ -418,11 +420,27 @@ export function syncPlantShipmentsCache(prevCache, plantId, indId, skuIdx, isMat
   return { newCache, updatedTargetInd };
 }
 
-export function shipmentMatchesTerm(ind, termLower) {
+export function extractMaterialId(term) {
+  if (!term || typeof term !== "string") return "";
+  return term.split(" / ")[0].trim();
+}
+
+export function shipmentMatchesTerm(ind, term) {
+  if (!term || !term.trim()) return true;
+  const cleanTerm = term.trim().toLowerCase();
+  const codePart = cleanTerm.split(" / ")[0].trim();
+  const descPart = cleanTerm.includes(" / ") ? cleanTerm.split(" / ")[1].trim() : "";
+
   return (ind.children || []).some(s => {
-    const id = s.Material || s.id || "";
-    const desc = s.MaterialDescription || s.desc || "";
-    return id.toLowerCase().includes(termLower) || desc.toLowerCase().includes(termLower);
+    const id = (s.Material || s.material || s.materialId || s.id || "").toLowerCase();
+    const desc = (s.MaterialDescription || s.materialDescription || s.desc || s.cbu || "").toLowerCase();
+    return (
+      id === codePart ||
+      id.includes(codePart) ||
+      (descPart && desc.includes(descPart)) ||
+      desc.includes(codePart) ||
+      desc.includes(cleanTerm)
+    );
   });
 }
 
@@ -430,16 +448,22 @@ export function computeSearchExpandState(plantsData, dcShipmentsCache, debounced
   const newPlants = {};
   const newDcs = {};
   const newInds = {};
-  const termLower = debouncedSearchTerm.toLowerCase();
+  if (!debouncedSearchTerm) return { newPlants, newDcs, newInds };
 
   for (const plant of plantsData) {
     let plantMatch = false;
     for (const dc of plant.children || []) {
       const cacheKey = `${plant.id}_${dc.id}`;
-      const shipments = dc.children || dcShipmentsCache[cacheKey] || [];
+      const shipments =
+        dc.children ||
+        dcShipmentsCache[cacheKey] ||
+        mockShipmentDetailsByDc?.[cacheKey] ||
+        mockShipmentDetailsByDc?.[cacheKey.toLowerCase()] ||
+        mockShipmentDetailsByDc?.[cacheKey.toUpperCase()] ||
+        [];
       let dcMatch = false;
       for (const ind of shipments) {
-        if (shipmentMatchesTerm(ind, termLower)) {
+        if (shipmentMatchesTerm(ind, debouncedSearchTerm)) {
           newInds[ind.id] = true;
           dcMatch = true;
           plantMatch = true;
@@ -451,6 +475,45 @@ export function computeSearchExpandState(plantsData, dcShipmentsCache, debounced
   }
 
   return { newPlants, newDcs, newInds };
+}
+
+export function getMaterialSearchOptions(filterDefs, dcShipmentsCache) {
+  const map = { ...MATERIAL_CODE_DESC_MAP };
+
+  if (dcShipmentsCache) {
+    Object.values(dcShipmentsCache).flat().forEach(s => {
+      (s.children || []).forEach(c => {
+        const id = c.Material || c.id || c.material;
+        const desc = c.MaterialDescription || c.desc || c.description;
+        if (id && desc && !map[id]) {
+          map[id] = desc;
+        }
+      });
+    });
+  }
+
+  if (mockShipmentDetailsByDc) {
+    Object.values(mockShipmentDetailsByDc).flat().forEach(s => {
+      (s.children || []).forEach(c => {
+        const id = c.Material || c.id || c.material;
+        const desc = c.MaterialDescription || c.desc || c.description;
+        if (id && desc && !map[id]) {
+          map[id] = desc;
+        }
+      });
+    });
+  }
+
+  const rawList = filterDefs?.find((f) => f.label === "CBU")?.options || [];
+  rawList.forEach(cbu => {
+    if (typeof cbu === "string") {
+      const code = cbu.split(" / ")[0].trim();
+      const desc = cbu.includes(" / ") ? cbu.split(" / ")[1].trim() : (map[code] || "");
+      map[code] = desc;
+    }
+  });
+
+  return Object.entries(map).map(([code, desc]) => (desc ? `${code} / ${desc}` : code)).sort();
 }
 
 export function updateFactoryEligibleFromRecords(factories, resolvedFactoryName, globalEligibleMap) {
