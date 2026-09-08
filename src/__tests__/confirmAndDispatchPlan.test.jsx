@@ -100,9 +100,10 @@ describe('confirmAndDispatchPlan Payload and Auto-Refresh', () => {
     expect(shipmentApi.updateShipmentPlan).toHaveBeenCalledTimes(1);
     const sentPayload = shipmentApi.updateShipmentPlan.mock.calls[0][0];
 
-    // Verify root fields
+    // Verify common root fields requested by user
     expect(sentPayload.sendingPlant).toBe('U036');
     expect(sentPayload.receivingPlant).toBe('BNDH');
+    expect(sentPayload.date).toBe('2026-08-01');
     expect(sentPayload.dc).toBe('BNDH');
     expect(sentPayload.selectedDate).toBe('2026-08-01');
     expect(sentPayload.shipmentId).toBe('5543520673');
@@ -113,22 +114,26 @@ describe('confirmAndDispatchPlan Payload and Auto-Refresh', () => {
     expect(sentPayload.totalCaseWeight).toBeCloseTo(0.3, 2); // 25 * 0.012 = 0.3
     expect(sentPayload.totalCases).toBe(346); // 321 + 25
 
-    // Verify material array
+    // Verify materials array
+    expect(Array.isArray(sentPayload.materials)).toBe(true);
     expect(Array.isArray(sentPayload.material)).toBe(true);
-    expect(sentPayload.material).toHaveLength(1);
-    const matItem = sentPayload.material[0];
-    expect(matItem.cbuId).toBe('BRCS1R4');
+    expect(sentPayload.materials).toHaveLength(1);
+    const matItem = sentPayload.materials[0];
     expect(matItem.materialId).toBe('BRCS1R4');
+    expect(matItem.cbuId).toBe('BRCS1R4');
     expect(matItem.materialDescription).toBe('BRU TRIPTI 200g RNS');
     expect(matItem.recommendedQuantity).toBe(25);
-    expect(matItem.eligibleQuantity).toBe(500);
     expect(matItem.finalUtilization).toBe(85);
+    expect(matItem.initialUtilization).toBe(72);
+    expect(matItem.newEligibility).toBe(500);
+    expect(matItem.eligibleQuantity).toBe(500);
+    expect(matItem.totalCases).toBe(346);
+    expect(matItem.newTotalWeight).toBeCloseTo(4.152, 2);
     expect(matItem.status).toBe('Accepted');
     expect(matItem.cbuWeight).toBeCloseTo(0.012, 3);
     expect(matItem.netWeight).toBeCloseTo(3.852, 3);
     expect(matItem.totalWeight).toBeCloseTo(4.152, 2);
     expect(matItem.totalCapacity).toBe(14);
-    expect(matItem.totalCases).toBe(346);
     expect(matItem.actualSourcePlant).toBe('U036');
 
     // 2. Verify dashboard refresh APIs were triggered after successful update

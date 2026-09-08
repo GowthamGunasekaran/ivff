@@ -3,6 +3,7 @@ import {
   recalcShipment,
   normalizeShipment,
   calculateRecMetrics,
+  buildDispatchPayload,
 } from '../appContextHelpers';
 
 describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
@@ -152,4 +153,90 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
       expect(metrics.clampedVal).toBe(50);
     });
   });
+
+  describe('buildDispatchPayload', () => {
+    const mockTargetInd = {
+      id: 'SHP-99',
+      shipmentId: 'SHP-99',
+      sendingPlantCode: 'U036',
+      dc: 'BNDH',
+      children: [
+        {
+          Material: 'MAT-ADDED',
+          cs: 100,
+          netweight: 1.2,
+          recQty: 50,
+          eligible: 200,
+          weight: 0.012,
+          initial_utilization: 72,
+          final_utilization: 84,
+        },
+        {
+          Material: 'MAT-ZERO',
+          cs: 200,
+          netweight: 2.4,
+          recQty: 0,
+          eligible: 100,
+          weight: 0.012,
+          initial_utilization: 72,
+          final_utilization: 84,
+        },
+      ],
+    };
+
+    it('filters materials to only include those where recommended quantity was added', () => {
+      const payload = buildDispatchPayload({
+        targetInd: mockTargetInd,
+        shipmentId: 'SHP-99',
+        sendingPlant: 'U036',
+        receivingPlant: 'BNDH',
+        selectedDate: '2026-08-01',
+        truckCapacity: 14.0,
+        initialUtilNum: 72.0,
+        finalUtilNum: 84.0,
+      });
+
+      expect(payload.sendingPlant).toBe('U036');
+      expect(payload.receivingPlant).toBe('BNDH');
+      expect(payload.date).toBe('2026-08-01');
+
+      // Only 1 material had recQty > 0
+      expect(payload.materials).toHaveLength(1);
+      const item = payload.materials[0];
+      expect(item.materialId).toBe('MAT-ADDED');
+      expect(item.recommendedQuantity).toBe(50);
+      expect(item.finalUtilization).toBeCloseTo(84.0, 1);
+      expect(item.initialUtilization).toBeCloseTo(72.0, 1);
+      expect(item.newEligibility).toBe(200);
+      expect(item.totalCases).toBe(150);
+      // 1.2 + 50 * 0.012 = 1.8T
+      expect(item.newTotalWeight).toBeCloseTo(1.8, 2);
+      expect(item.status).toBe('Accepted');
+    });
+
+    it('serializes only common fields sendingPlant, receivingPlant, date, and materials via JSON.stringify', () => {
+      const payload = buildDispatchPayload({
+        targetInd: mockTargetInd,
+        shipmentId: 'SHP-99',
+        sendingPlant: 'U036',
+        receivingPlant: 'BNDH',
+        selectedDate: '2026-08-01',
+        truckCapacity: 14.0,
+        initialUtilNum: 72.0,
+        finalUtilNum: 84.0,
+      });
+
+      const serialized = JSON.parse(JSON.stringify(payload));
+      const rootKeys = Object.keys(serialized);
+
+      expect(rootKeys).toContain('sendingPlant');
+      expect(rootKeys).toContain('receivingPlant');
+      expect(rootKeys).toContain('date');
+      expect(rootKeys).toContain('materials');
+      expect(rootKeys).not.toContain('grossWeight');
+      expect(rootKeys).not.toContain('totalCaseWeight');
+      expect(rootKeys).not.toContain('totalCapacity');
+    });
+  });
 });
+

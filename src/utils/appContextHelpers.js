@@ -521,7 +521,7 @@ export function resolveTargetShipment(indOrId, summaryPayload, reviewInd, dcShip
   return allShipments.find(s => s?.id === indOrId || s?.shipmentId === indOrId) || null;
 }
 
-export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum, sendingPlant) {
+export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum, sendingPlant, initialUtilNum) {
   const cbuId =
     sku.Material ||
     sku.material ||
@@ -541,6 +541,7 @@ export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum,
   const eligQty =
     parseFloat(sku.eligible) ||
     parseFloat(sku.eligibleQuantity) ||
+    parseFloat(sku.newEligibility) ||
     0;
   const ordCs =
     Number(sku.cs) ||
@@ -562,22 +563,30 @@ export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum,
     parseFloat(sku.cap) ||
     truckCapacity;
   const matFinalUtil = resolveSkuUtilization(sku.final_utilization, finalUtilNum);
+  const matInitialUtil = resolveSkuUtilization(sku.initial_utilization, initialUtilNum);
 
   return {
     item: {
-      cbuId,
       materialId: cbuId,
+      recommendedQuantity: recQty,
+      finalUtilization: matFinalUtil,
+      initialUtilization: matInitialUtil,
+      newEligibility: eligQty,
+      totalCases: totalCs,
+      newTotalWeight: parseFloat(totalWeight.toFixed(3)),
+      status: "Accepted",
+
+      // Backward-compatibility properties
+      cbuId,
       material: cbuId,
       cbu: description || cbuId,
       materialDescription: description,
       description,
-      recommendedQuantity: recQty,
       recQty,
       eligibleQuantity: eligQty,
       eligible: eligQty,
-      finalUtilization: matFinalUtil,
       final_utilization: matFinalUtil,
-      status: "Accepted",
+      initial_utilization: matInitialUtil,
       cbuWeight: csWeight,
       cbWeight: csWeight,
       csWeight,
@@ -589,7 +598,6 @@ export function buildDispatchMaterialItem(sku, idx, truckCapacity, finalUtilNum,
       totalCapacity: matCapacity,
       capacity: matCapacity,
       orderedCases: ordCs,
-      totalCases: totalCs,
       actualSourcePlant: sku.actual_source_plant_code || sendingPlant,
       sourcePlant: sku.actual_source_plant_code || sendingPlant,
       priority: sku.priority || sku.Shipment_Priority || "Low",
@@ -615,17 +623,26 @@ export function buildDispatchPayload({
     targetInd?.children ||
     (Array.isArray(customManifest) && customManifest.length > 0 ? customManifest : []);
 
+  // Include materials where user added / changed recommended quantity (or all if none specified)
+  const candidateSkus = (rawSkus || []).filter(sku => {
+    const curRec = parseFloat(sku.recQty) || 0;
+    const baseRec = parseFloat(sku.baseRecQty) || 0;
+    return curRec > 0 || (sku.baseRecQty != null && curRec !== baseRec);
+  });
+  const skusToInclude = candidateSkus.length > 0 ? candidateSkus : (rawSkus || []);
+
   let overallOrderedWeight = 0;
   let overallAddedWeight = 0;
   let overallTotalCases = 0;
 
-  const materialList = (rawSkus || []).map((sku, idx) => {
+  const materialList = skusToInclude.map((sku, idx) => {
     const { item, netWeight, addedWeight, totalCs } = buildDispatchMaterialItem(
       sku,
       idx,
       truckCapacity,
       finalUtilNum,
-      sendingPlant
+      sendingPlant,
+      initialUtilNum
     );
     overallOrderedWeight += netWeight;
     overallAddedWeight += addedWeight;
@@ -639,31 +656,36 @@ export function buildDispatchPayload({
   const overallGrossWeight = overallTotalWeight;
   const overallCaseWeight = parseFloat(overallAddedWeight.toFixed(4));
 
-  return {
+  const payload = {
     sendingPlant,
-    sourcePlant: sendingPlant,
     receivingPlant,
-    selectedDate,
     date: selectedDate,
-    dc: receivingPlant,
-    shipment: shipmentId,
-    shipmentId,
-    status: "Accepted",
-    finalUtilization: finalUtilNum,
-    finalUtil: finalUtilNum,
-    initialUtilization: initialUtilNum,
-    totalCapacity: truckCapacity,
-    capacity: truckCapacity,
-    totalWeight: overallTotalWeight,
-    grossWeight: overallGrossWeight,
-    totalCaseWeight: overallCaseWeight,
-    caseWeight: overallCaseWeight,
-    weight: overallTotalWeight,
-    totalCases: overallTotalCases,
-    material: materialList,
     materials: materialList,
-    manifest: customManifest || materialList,
+    material: materialList,
   };
+
+  Object.defineProperties(payload, {
+    shipmentId: { value: shipmentId, enumerable: false, writable: true },
+    shipment: { value: shipmentId, enumerable: false, writable: true },
+    selectedDate: { value: selectedDate, enumerable: false, writable: true },
+    dc: { value: receivingPlant, enumerable: false, writable: true },
+    sourcePlant: { value: sendingPlant, enumerable: false, writable: true },
+    status: { value: "Accepted", enumerable: false, writable: true },
+    finalUtilization: { value: finalUtilNum, enumerable: false, writable: true },
+    finalUtil: { value: finalUtilNum, enumerable: false, writable: true },
+    initialUtilization: { value: initialUtilNum, enumerable: false, writable: true },
+    totalCapacity: { value: truckCapacity, enumerable: false, writable: true },
+    capacity: { value: truckCapacity, enumerable: false, writable: true },
+    totalWeight: { value: overallTotalWeight, enumerable: false, writable: true },
+    grossWeight: { value: overallGrossWeight, enumerable: false, writable: true },
+    totalCaseWeight: { value: overallCaseWeight, enumerable: false, writable: true },
+    caseWeight: { value: overallCaseWeight, enumerable: false, writable: true },
+    weight: { value: overallTotalWeight, enumerable: false, writable: true },
+    totalCases: { value: overallTotalCases, enumerable: false, writable: true },
+    manifest: { value: customManifest || materialList, enumerable: false, writable: true },
+  });
+
+  return payload;
 }
 
 export function updateShipmentAcceptedStatus(shipmentsList, shipmentId, finalUtilNum) {
