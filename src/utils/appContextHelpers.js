@@ -113,14 +113,14 @@ export function buildGlobalEligible(factoriesList) {
       const nameKey = (m.name || m.location || "").toUpperCase().trim();
       const elig = typeof m.eligible === "number" ? m.eligible : parseFloat(String(m.eligible).replace(/,/g, "")) || 0;
       const stock = resolveStockValue(m);
-      const initialPool = stock > 0 ? stock : elig;
+      const initialPool = (m.eligible != null && !isNaN(elig)) ? elig : (stock > 0 ? stock : 0);
 
       const record = {
         factoryName: fName,
         code: m.code || m.dc,
         name: m.name || m.location,
         initialEligible: initialPool,
-        currentEligible: elig,
+        currentEligible: initialPool,
         stock,
       };
       if (codeKey) state[fName][codeKey] = record;
@@ -268,10 +268,8 @@ export function normalizeShipment(raw, resolvedFactoryName, globalEligibleMap) {
     const initialPool = resolveInitialPool(matRecord, sku.eligible);
     const currentPool = matRecord ? matRecord.currentEligible : initialPool;
 
-    const remainingEligible = Math.max(0, currentPool - rec);
-    if (matRecord) {
-      matRecord.currentEligible = remainingEligible;
-    }
+    // Do not subtract recommended quantity at initial rendering
+    const remainingEligible = currentPool;
 
     const skuInitialUtil = resolveBackendUtil(sku.initial_utilization) ?? baseFrom;
     const skuFinalUtil = resolveBackendUtil(sku.final_utilization) ?? baseTo;
@@ -279,7 +277,7 @@ export function normalizeShipment(raw, resolvedFactoryName, globalEligibleMap) {
     return {
       ...sku,
       recQty: rec,
-      baseRecQty: rec,
+      baseRecQty: sku.baseRecQty != null ? parseFloat(sku.baseRecQty) : rec,
       eligible: remainingEligible,
       maxElig: rec + remainingEligible,
       csWeight: csW,
@@ -312,28 +310,34 @@ export function buildSkuMatchKeys(s) {
   };
 }
 
-export function sumShipmentConsumedRec(ind, indId, skuIdx, isMatch) {
-  let sum = 0;
+export function sumShipmentConsumedDelta(ind, indId, skuIdx, isMatch) {
+  let deltaSum = 0;
   const children = ind.children || [];
   for (let idx = 0; idx < children.length; idx++) {
     const isTarget = ind.id === indId && idx === skuIdx;
     if (!isTarget && isMatch(children[idx])) {
-      sum += parseFloat(children[idx].recQty) || 0;
+      const s = children[idx];
+      const curRec = parseFloat(s.recQty) || 0;
+      const baseRec = s.baseRecQty != null ? (parseFloat(s.baseRecQty) || 0) : curRec;
+      deltaSum += (curRec - baseRec);
     }
   }
-  return sum;
+  return deltaSum;
 }
 
-export function calculateOtherConsumedRec(prevCache, plantId, indId, skuIdx, isMatch) {
-  let otherConsumedRec = 0;
+export function calculateOtherConsumedDelta(prevCache, plantId, indId, skuIdx, isMatch) {
+  let otherDelta = 0;
   for (const [k, shipments] of Object.entries(prevCache)) {
     if (!k.startsWith(`${plantId}_`)) continue;
     for (const ind of shipments) {
-      otherConsumedRec += sumShipmentConsumedRec(ind, indId, skuIdx, isMatch);
+      otherDelta += sumShipmentConsumedDelta(ind, indId, skuIdx, isMatch);
     }
   }
-  return otherConsumedRec;
+  return otherDelta;
 }
+
+export const sumShipmentConsumedRec = sumShipmentConsumedDelta;
+export const calculateOtherConsumedRec = calculateOtherConsumedDelta;
 
 export function updateFactoryListInventory(factories, resolvedFactoryName, isMatch, newRemainingEligible) {
   return (factories || []).map(f => {
@@ -868,15 +872,15 @@ export function calculateRecMetrics({ prevCache, plantId, dcId, indId, skuIdx, v
 
   const matRecord = lookupMaterialRecord(resolvedFactoryName, targetSku, globalEligibleMap);
   const poolVal = matRecord ? matRecord.initialEligible : 0;
-  const fallbackElig = (targetSku.maxElig != null && targetSku.maxElig > 0)
-    ? targetSku.maxElig
-    : ((parseFloat(targetSku.recQty) || 0) + (parseFloat(targetSku.eligible) || 0));
-  const initialElig = poolVal > 0 ? poolVal : fallbackElig;
+  const initialElig = poolVal > 0 ? poolVal : (parseFloat(targetSku.eligible) || 0);
 
-  const otherConsumedRec = calculateOtherConsumedRec(prevCache, plantId, indId, skuIdx, isMatch);
-  const maxAllowed = initialElig > 0 ? Math.max(0, initialElig - otherConsumedRec) : 10000;
+  const baseRec = targetSku.baseRecQty != null ? (parseFloat(targetSku.baseRecQty) || 0) : (parseFloat(targetSku.recQty) || 0);
+  const otherDelta = calculateOtherConsumedDelta(prevCache, plantId, indId, skuIdx, isMatch);
+
+  const maxAllowed = initialElig > 0 ? Math.max(0, initialElig - otherDelta + baseRec) : 10000;
   const clampedVal = Math.max(0, Math.min(isNaN(Number(val)) ? 0 : Number(val), maxAllowed));
-  const newRemainingEligible = initialElig > 0 ? Math.max(0, initialElig - (otherConsumedRec + clampedVal)) : 0;
+  const targetDelta = clampedVal - baseRec;
+  const newRemainingEligible = initialElig > 0 ? Math.max(0, initialElig - (otherDelta + targetDelta)) : 0;
 
   if (targetSku.recQty === clampedVal && targetSku.eligible === newRemainingEligible) {
     return null;

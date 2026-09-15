@@ -156,6 +156,71 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
       expect(metrics).not.toBeNull();
       expect(metrics.clampedVal).toBe(50);
     });
+
+    it('does not deduct initial recQty from eligible at initial rendering, decreases eligible by 1 when 10 becomes 11, and adds 10 to eligible when 10 becomes 0', () => {
+      const globalEligibleMap = {
+        U036: {
+          'MAT-10': {
+            factoryName: 'U036',
+            code: 'MAT-10',
+            initialEligible: 100,
+            currentEligible: 100,
+          },
+        },
+      };
+
+      const raw = {
+        id: 'SHP-1',
+        capacity: 14.0,
+        initial_utilization: 72.0,
+        children: [
+          {
+            Material: 'MAT-10',
+            cs: 100,
+            recQty: 10,
+            eligible: 100,
+          },
+        ],
+      };
+
+      // 1. Initial normalization must NOT deduct recQty (10) from eligible (100)
+      const normalized = normalizeShipment(raw, 'U036', globalEligibleMap);
+      expect(normalized.children[0].eligible).toBe(100);
+      expect(normalized.children[0].baseRecQty).toBe(10);
+      expect(globalEligibleMap.U036['MAT-10'].currentEligible).toBe(100);
+
+      const prevCache = {
+        'U036_BNDH': [normalized],
+      };
+
+      // 2. Changing recQty from 10 to 11 decreases global eligible by 1 (100 -> 99)
+      const incMetrics = calculateRecMetrics({
+        prevCache,
+        plantId: 'U036',
+        dcId: 'BNDH',
+        indId: 'SHP-1',
+        skuIdx: 0,
+        val: 11,
+        resolvedFactoryName: 'U036',
+        globalEligibleMap,
+      });
+      expect(incMetrics.clampedVal).toBe(11);
+      expect(incMetrics.newRemainingEligible).toBe(99);
+
+      // 3. Changing recQty from 10 to 0 adds 10 to global eligible (100 -> 110)
+      const zeroMetrics = calculateRecMetrics({
+        prevCache,
+        plantId: 'U036',
+        dcId: 'BNDH',
+        indId: 'SHP-1',
+        skuIdx: 0,
+        val: 0,
+        resolvedFactoryName: 'U036',
+        globalEligibleMap,
+      });
+      expect(zeroMetrics.clampedVal).toBe(0);
+      expect(zeroMetrics.newRemainingEligible).toBe(110);
+    });
   });
 
   describe('isSkuAddedOrEdited', () => {
