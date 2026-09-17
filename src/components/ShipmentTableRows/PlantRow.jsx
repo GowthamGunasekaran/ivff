@@ -27,6 +27,7 @@ export const PlantRow = memo(function PlantRow({
   onRecChange,
   searchTerm,
   onReview,
+  onAddCbu,
   dcShipmentsCache = {},
   dcLoadingState = {},
   dcErrorState = {},
@@ -89,6 +90,7 @@ export const PlantRow = memo(function PlantRow({
                       onRecChange={(dcId, indId, skuIdx, val) => onRecChange && onRecChange(plant.id, dcId, indId, skuIdx, val)}
                       searchTerm={searchTerm}
                       onReview={onReview}
+                      onAddCbu={onAddCbu}
                       shipments={shipments}
                       isLoading={isLoading}
                       error={error}

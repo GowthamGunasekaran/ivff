@@ -7,7 +7,7 @@
 import { memo, useState, useEffect } from "react";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
-import { PBadge, FillBadge } from "./TableBadges";
+import { PBadge, FillBadge, NewBadge } from "./TableBadges";
 import { COL } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
@@ -140,6 +140,7 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
         <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
           <span className={`${styles.skuId} ${highlight ? styles.skuIdHighlight : ""}`}>{skuId}</span>
           {sku.fill && <FillBadge />}
+          {(sku.isAdded || sku.isNew) && <NewBadge />}
         </div>
       </TableCell>
       <TableCell className={cellClass} sx={{ width: COL.desc }}>

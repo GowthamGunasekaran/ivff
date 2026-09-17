@@ -40,6 +40,12 @@ function computeManifest(skus) {
 
   const rows = (skus || []).map((sku) => {
     const isAi = !!sku.fill;
+    const isNew = Boolean(
+      sku.isAdded ||
+      sku.isNew ||
+      sku.userAdded ||
+      (sku.tag && String(sku.tag).toUpperCase() === "NEW")
+    );
     const name = sku.MaterialDescription || sku.Material;
     const source = "FACTORY";
     const origCs = Number(sku.cs) || Number(sku.ord_qty) || 0;
@@ -58,15 +64,16 @@ function computeManifest(skus) {
       cbu: name,
       material: sku.Material || sku.material || sku.materialId,
       source,
-      tag: isAi ? "AI" : "ORIGINAL",
+      tag: isNew ? "NEW" : (isAi ? "AI" : "ORIGINAL"),
       origQty: origCs > 0 ? origCs : "—",
       recQty: recCs > 0 ? recCs : "—",
       final: finalCs,
       weight: weightKg,
       tonnage,
       isAi,
+      isNew,
       isEdited: Boolean(sku.isEdited || sku.userEdited),
-      isAdded: Boolean(sku.isAdded || sku.userAdded),
+      isAdded: isNew,
       baseRecQty: sku.baseRecQty,
       eligible: sku.eligible,
       csWeight,

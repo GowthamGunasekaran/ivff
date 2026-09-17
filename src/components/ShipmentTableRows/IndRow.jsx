@@ -74,7 +74,7 @@ function resolveSkuCaseWeight(r) {
   return rawW / 1000;
 }
 
-export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onReview, dcLabel }) {
+export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onReview, dcLabel, onAddCbu }) {
   const skus = ind.children || [];
   const priority = skus[0]?.priority || skus[0]?.Shipment_Priority || ind.priority || "Low";
   const status = ind.status || skus[0]?.status || "Pending";
@@ -219,7 +219,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   );
 });
 
-export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, dcLabel }) {
+export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, dcLabel, onAddCbu }) {
   const skus = ind.children || [];
 
   const displayedSkus = useMemo(() => {
@@ -247,7 +247,7 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
 
   return (
     <>
-      <IndRowMain ind={ind} open={open} onToggle={onToggle} searchTerm={searchTerm} onReview={onReview} dcLabel={dcLabel} />
+      <IndRowMain ind={ind} open={open} onToggle={onToggle} searchTerm={searchTerm} onReview={onReview} dcLabel={dcLabel} onAddCbu={onAddCbu} />
       {open && (
         <TableRow>
           <TableCell colSpan={12} sx={{ p: 0, border: "none" }}>
@@ -267,7 +267,10 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
                 {!searchTerm && (
                   <TableRow>
                     <TableCell colSpan={12} className={styles.skuCellAdd}>
-                      <button className={styles.skuBtnAdd}>
+                      <button
+                        className={styles.skuBtnAdd}
+                        onClick={e => { e.stopPropagation(); onAddCbu && onAddCbu(ind); }}
+                      >
                         <AddIcon className={styles.skuIconAdd} /> Add CBU
                       </button>
                     </TableCell>

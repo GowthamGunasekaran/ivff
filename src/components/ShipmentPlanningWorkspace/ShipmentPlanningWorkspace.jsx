@@ -17,6 +17,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useAppContext } from "../../AppContext";
 import ReviewDialog from "../ReviewDialog/ReviewDialog";
+import AddCbuDialog from "../AddCbuDialog/AddCbuDialog";
 import SearchResultPanel from "../SearchResultPanel/SearchResultPanel";
 import { PlantRow } from "../ShipmentTableRows/ShipmentTableRows";
 import { getMaterialSearchOptions } from "../../utils/appContextHelpers";
@@ -68,6 +69,26 @@ export default function ShipmentPlanningWorkspace() {
   // Pagination State (10 records per page)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Add CBU Dialog State
+  const [addCbuInd, setAddCbuInd] = useState(null);
+  const [addCbuDcLabel, setAddCbuDcLabel] = useState("");
+  const [addCbuPlantId, setAddCbuPlantId] = useState("");
+  const [addCbuDcId, setAddCbuDcId] = useState("");
+
+  const handleAddCbu = (ind, dcLabel, plantId, dcId) => {
+    setAddCbuInd(ind);
+    setAddCbuDcLabel(dcLabel || "");
+    setAddCbuPlantId(plantId || "");
+    setAddCbuDcId(dcId || "");
+  };
+
+  const handleAddCbuClose = () => {
+    setAddCbuInd(null);
+    setAddCbuDcLabel("");
+    setAddCbuPlantId("");
+    setAddCbuDcId("");
+  };
 
   const cbuOptions = useMemo(() => {
     return getMaterialSearchOptions(filterDefs, dcShipmentsCache);
@@ -213,22 +234,23 @@ export default function ShipmentPlanningWorkspace() {
             <TableBody>
               {displayedPlants.map((p) => (
                 <PlantRow
-                  key={p.id}
-                  plant={p}
-                  openPlant={!!openPlants[p.id]}
-                  onTogglePlant={() => togglePlant(p.id)}
-                  openDcs={openDcs}
-                  onToggleDc={toggleDc}
-                  openInds={openInds}
-                  onToggleInd={toggleInd}
-                  onRecChange={handleRecChange}
-                  searchTerm={debouncedSearchTerm ? debouncedSearchTerm.trim() : ""}
-                  onReview={(ind, dcLabel) => { setReviewInd(ind); setReviewDc(dcLabel); }}
-                  dcShipmentsCache={dcShipmentsCache}
-                  dcLoadingState={dcLoadingState}
-                  dcErrorState={dcErrorState}
-                  onRetry={retryFetchDc}
-                />
+                   key={p.id}
+                   plant={p}
+                   openPlant={!!openPlants[p.id]}
+                   onTogglePlant={() => togglePlant(p.id)}
+                   openDcs={openDcs}
+                   onToggleDc={toggleDc}
+                   openInds={openInds}
+                   onToggleInd={toggleInd}
+                   onRecChange={handleRecChange}
+                   searchTerm={debouncedSearchTerm ? debouncedSearchTerm.trim() : ""}
+                   onReview={(ind, dcLabel) => { setReviewInd(ind); setReviewDc(dcLabel); }}
+                   onAddCbu={handleAddCbu}
+                   dcShipmentsCache={dcShipmentsCache}
+                   dcLoadingState={dcLoadingState}
+                   dcErrorState={dcErrorState}
+                   onRetry={retryFetchDc}
+                 />
               ))}
             </TableBody>
           </Table>
@@ -299,6 +321,14 @@ export default function ShipmentPlanningWorkspace() {
       </div>
 
       <ReviewDialog open={!!reviewInd} ind={reviewInd} dcLabel={reviewDc} onClose={() => setReviewInd(null)} />
+      <AddCbuDialog
+        open={!!addCbuInd}
+        ind={addCbuInd}
+        dcLabel={addCbuDcLabel}
+        plantId={addCbuPlantId}
+        dcId={addCbuDcId}
+        onClose={handleAddCbuClose}
+      />
     </div>
   );
 }

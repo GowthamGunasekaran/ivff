@@ -907,3 +907,116 @@ export function buildInitialDashboardPayload(defaultDateVal) {
     toDate: defaultDateVal,
   };
 }
+
+/**
+ * Synchronizes newly selected / unselected CBUs with existing shipment children.
+ * Returns { updatedChildren, deltas, hasChanges }.
+ */
+export function syncCbuDeltaAndChildren(prevChildren = [], newSkus = []) {
+  const newSkuMap = new Map();
+  newSkus.forEach(s => {
+    const code = (s.Material || s.code || s.materialId || s.id || "").toUpperCase().trim();
+    const qty = parseFloat(s.recQty) || 0;
+    if (code && qty > 0) {
+      newSkuMap.set(code, { ...s, recQty: qty });
+    }
+  });
+
+  const deltas = new Map();
+  const updatedChildren = [];
+  let hasChanges = false;
+
+  prevChildren.forEach(child => {
+    const code = (child.Material || child.code || child.materialId || child.id || "").toUpperCase().trim();
+    const isNewCbu = Boolean(
+      child.isAdded ||
+      child.isNew ||
+      child.userAdded ||
+      (child.tag && String(child.tag).toUpperCase() === "NEW")
+    );
+
+    if (!isNewCbu) {
+      updatedChildren.push(child);
+      return;
+    }
+
+    const oldRec = parseFloat(child.recQty) || 0;
+    if (newSkuMap.has(code)) {
+      const selected = newSkuMap.get(code);
+      const newRec = parseFloat(selected.recQty) || 0;
+      const delta = newRec - oldRec;
+      if (delta !== 0) {
+        deltas.set(code, { delta, item: child });
+        hasChanges = true;
+      }
+      updatedChildren.push({
+        ...child,
+        ...selected,
+        recQty: newRec,
+        isEdited: true,
+        isAdded: true,
+        isNew: true,
+      });
+      newSkuMap.delete(code);
+    } else {
+      const delta = -oldRec;
+      deltas.set(code, { delta, item: child });
+      hasChanges = true;
+    }
+  });
+
+  for (const [code, s] of newSkuMap.entries()) {
+    const newRec = parseFloat(s.recQty) || 0;
+    deltas.set(code, { delta: newRec, item: s });
+    hasChanges = true;
+
+    updatedChildren.push({
+      ...s,
+      recQty: newRec,
+      isAdded: true,
+      isNew: true,
+      baseRecQty: 0,
+    });
+  }
+
+  return { updatedChildren, deltas, hasChanges };
+}
+
+/**
+ * Applies inventory deltas to global eligible ref, factory list, and factory details.
+ */
+export function applyCbuInventoryDeltas({
+  deltas,
+  resolvedFactoryName,
+  globalEligibleRef,
+  setFactories,
+  setFactoryDetails,
+  setGlobalEligibleState,
+}) {
+  let globalChanged = false;
+  for (const [code, { delta, item }] of deltas.entries()) {
+    if (delta === 0) continue;
+
+    const matRecord = lookupMaterialRecord(resolvedFactoryName, item, globalEligibleRef.current);
+    if (matRecord) {
+      const currentPool = Number(matRecord.currentEligible ?? matRecord.initialEligible ?? 0);
+      const newRemaining = Math.max(0, currentPool - delta);
+      matRecord.currentEligible = newRemaining;
+      globalChanged = true;
+
+      const isMatch = (elem) => {
+        const elemCode = (elem.code || elem.dc || elem.Material || "").toUpperCase().trim();
+        return elemCode === code;
+      };
+
+      setFactories(prevF => updateFactoryListInventory(prevF, resolvedFactoryName, isMatch, newRemaining));
+      setFactoryDetails(prevD => updateFactoryDetailsInventory(prevD, resolvedFactoryName, isMatch, newRemaining));
+    }
+  }
+
+  if (globalChanged) {
+    setGlobalEligibleState({ ...globalEligibleRef.current });
+  }
+}
+
+

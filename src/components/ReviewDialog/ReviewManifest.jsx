@@ -49,9 +49,17 @@ export default function ReviewManifest({ manifestData }) {
             {rows.map((row, idx) => (
               <TableRow key={row.cbu + idx} className={row.isAi ? styles.tableRowAi : styles.tableRow}>
                 <TableCell className={styles.tableCell}>
-                  <div className={row.isAi ? styles.cbuNameAi : styles.cbuName}>{row.cbu}</div>
-                  <span className={row.isAi ? styles.tagBadgeAi : styles.tagBadgeOrig}>
-                    {row.isAi ? "AI RECOMMENDATION" : "ORIGINAL"}
+                  <div className={row.isAi ? styles.cbuNameAi : (row.isNew ? styles.cbuNameNew : styles.cbuName)}>{row.cbu}</div>
+                  <span
+                    className={
+                      row.isNew
+                        ? styles.tagBadgeNew
+                        : row.isAi
+                        ? styles.tagBadgeAi
+                        : styles.tagBadgeOrig
+                    }
+                  >
+                    {row.isNew ? "NEW CBU" : (row.isAi ? "AI RECOMMENDATION" : "ORIGINAL")}
                   </span>
                 </TableCell>
                 <TableCell className={`${styles.tableCell} ${styles.tableCellSecondary}`}>

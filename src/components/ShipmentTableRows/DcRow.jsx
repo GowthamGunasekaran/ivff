@@ -70,6 +70,7 @@ export const DcRow = memo(function DcRow({
   onRecChange,
   searchTerm,
   onReview,
+  onAddCbu,
   shipments = [],
   isLoading = false,
   error = null,
@@ -128,6 +129,7 @@ export const DcRow = memo(function DcRow({
                       searchTerm={searchTerm}
                       onReview={onReview}
                       dcLabel={dc.dc}
+                      onAddCbu={onAddCbu ? (ind) => onAddCbu(ind, dc.dc, plantId, dc.id) : undefined}
                     />
                   ))
                 )}

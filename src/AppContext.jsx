@@ -30,6 +30,10 @@ import {
   refreshDashboardAfterDispatch,
   calculateRecMetrics,
   buildInitialDashboardPayload,
+  recalcShipment,
+  lookupMaterialRecord,
+  syncCbuDeltaAndChildren,
+  applyCbuInventoryDeltas,
 } from "./utils/appContextHelpers";
 
 // Re-export all helpers for seamless backward-compatibility
@@ -242,6 +246,45 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
+  // Add new CBU materials to an existing shipment, support removing unchecked materials, and sync with global inventory
+  const addCbuToShipment = useCallback((plantId, dcId, indId, newSkus = []) => {
+    const resolvedFactoryName = resolveFactoryName(plantId, plantsDataRef.current, factoriesRef.current);
+
+    setDcShipmentsCache(prev => {
+      const cacheKey = `${plantId}_${dcId}`;
+      const shipments = prev[cacheKey] || [];
+      const indIndex = shipments.findIndex(s => s.id === indId);
+      if (indIndex === -1) return prev;
+
+      const current = shipments[indIndex];
+      const prevChildren = current.children || [];
+
+      const { updatedChildren, deltas, hasChanges } = syncCbuDeltaAndChildren(prevChildren, newSkus);
+      if (!hasChanges && updatedChildren.length === prevChildren.length) {
+        return prev;
+      }
+
+      applyCbuInventoryDeltas({
+        deltas,
+        resolvedFactoryName,
+        globalEligibleRef,
+        setFactories,
+        setFactoryDetails,
+        setGlobalEligibleState,
+      });
+
+      const recalculated = recalcShipment(current, updatedChildren);
+      const newShipments = [
+        ...shipments.slice(0, indIndex),
+        recalculated,
+        ...shipments.slice(indIndex + 1),
+      ];
+
+      setReviewInd(cur => (cur?.id === indId ? recalculated : cur));
+      return { ...prev, [cacheKey]: newShipments };
+    });
+  }, []);
+
   const updateShipmentStatus = useCallback((plantId, dcId, indId, newStatus) => {
     const cacheKey = `${plantId}_${dcId}`;
     setDcShipmentsCache(prev => {
@@ -435,6 +478,7 @@ export const AppProvider = ({ children }) => {
     globalEligibleState,
     updateShipmentStatus,
     confirmAndDispatchPlan,
+    addCbuToShipment,
     showToast,
     date: selectedDate,
     defaultDate: "2026-08-01",

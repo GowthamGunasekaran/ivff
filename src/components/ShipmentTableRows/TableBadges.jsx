@@ -69,3 +69,24 @@ export function StatusBadge({ status }) {
   const c = map[status] || map.PENDING;
   return <span className={styles.badgeStatus} style={{ background: c.bg, color: c.color }}>{status}</span>;
 }
+
+export function NewBadge() {
+  return (
+    <span
+      style={{
+        display: "inline-block",
+        marginLeft: 4,
+        fontWeight: 700,
+        fontSize: 7.5,
+        padding: "1px 5px",
+        borderRadius: 3,
+        background: "#dcfce7",
+        color: "#15803d",
+        letterSpacing: 0.3,
+        verticalAlign: "middle",
+      }}
+    >
+      NEW
+    </span>
+  );
+}

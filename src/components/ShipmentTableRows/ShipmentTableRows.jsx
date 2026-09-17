@@ -4,7 +4,7 @@
  * Exports PBadge, FillBadge, StatusBadge, SkuRow, IndRow, IndRowMain, DcRow, PlantRow.
  */
 
-export { PBadge, FillBadge, StatusBadge } from "./TableBadges";
+export { PBadge, FillBadge, StatusBadge, NewBadge } from "./TableBadges";
 export { SkuRow } from "./SkuRow";
 export { IndRow, IndRowMain } from "./IndRow";
 export { DcRow } from "./DcRow";
