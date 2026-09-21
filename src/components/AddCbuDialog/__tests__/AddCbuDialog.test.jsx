@@ -98,8 +98,18 @@ describe('AddCbuDialog Component', () => {
 
     expect(screen.getByText(/Add New CBU/i)).toBeInTheDocument();
     expect(screen.getAllByText('SHP-99001').length).toBeGreaterThan(0);
-    expect(screen.getByText('Current Util')).toBeInTheDocument();
-    expect(screen.getByText('Final Util')).toBeInTheDocument();
+    expect(screen.getByText('Shipment ID')).toBeInTheDocument();
+    expect(screen.getByText('Indent ID')).toBeInTheDocument();
+    expect(screen.queryByText('Current Util')).not.toBeInTheDocument();
+    expect(screen.queryByText('Final Util')).not.toBeInTheDocument();
+    expect(screen.getByText('CBU')).toBeInTheDocument();
+    expect(screen.getByText('Material Description')).toBeInTheDocument();
+    expect(screen.getByText('MSD Loss')).toBeInTheDocument();
+    expect(screen.getByText('Eligibility')).toBeInTheDocument();
+    expect(screen.getByText('Recommended Quantity')).toBeInTheDocument();
+    expect(screen.queryByText('Source Plant')).not.toBeInTheDocument();
+    expect(screen.queryByText('Priority')).not.toBeInTheDocument();
+    expect(screen.queryByText('Order Loss')).not.toBeInTheDocument();
   });
 
   it('filters out Original materials (CBU ID + Material ID + Original) from the Add New CBU table', () => {
@@ -114,7 +124,8 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    // MAT_ORIG_01 is an Original material -> MUST NOT be in the table
+    // MAT_ORIG_01 / ORIG_CBU_01 is an Original material -> MUST NOT be in the table
+    expect(screen.queryByText('ORIG_CBU_01')).not.toBeInTheDocument();
     expect(screen.queryByText('MAT_ORIG_01')).not.toBeInTheDocument();
     expect(screen.queryByText('Original Material 1')).not.toBeInTheDocument();
   });
@@ -131,13 +142,13 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    // MAT_NEW_02 has New tag -> displayed with NEW badge
-    expect(screen.getByText('MAT_NEW_02')).toBeInTheDocument();
+    // NEW_CBU_02 has New tag -> displayed with NEW badge
+    expect(screen.getByText('NEW_CBU_02')).toBeInTheDocument();
     expect(screen.getByText('Previously Added New CBU')).toBeInTheDocument();
     expect(screen.getByText('NEW')).toBeInTheDocument();
 
-    // The checkbox for MAT_NEW_02 should be checked by default
-    const row = screen.getByText('MAT_NEW_02').closest('tr');
+    // The checkbox for NEW_CBU_02 should be checked by default
+    const row = screen.getByText('NEW_CBU_02').closest('tr');
     const checkbox = row.querySelector('input[type="checkbox"]');
     expect(checkbox).toBeChecked();
 
@@ -159,11 +170,11 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const row = screen.getByText('MAT_NEW_02').closest('tr');
+    const row = screen.getByText('NEW_CBU_02').closest('tr');
     const checkbox = row.querySelector('input[type="checkbox"]');
     expect(checkbox).toBeChecked();
 
-    // Uncheck MAT_NEW_02
+    // Uncheck NEW_CBU_02
     fireEvent.click(checkbox);
     expect(checkbox).not.toBeChecked();
 
@@ -193,10 +204,10 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    // MAT_AVAIL_03 and MAT_TEA_04 not in shipment -> MUST BE displayed
-    expect(screen.getByText('MAT_AVAIL_03')).toBeInTheDocument();
+    // AVAIL_CBU_03 and TEA_CBU_04 not in shipment -> MUST BE displayed
+    expect(screen.getByText('AVAIL_CBU_03')).toBeInTheDocument();
     expect(screen.getByText('Fresh Available Material')).toBeInTheDocument();
-    expect(screen.getByText('MAT_TEA_04')).toBeInTheDocument();
+    expect(screen.getByText('TEA_CBU_04')).toBeInTheDocument();
     expect(screen.getByText('Green Tea Bags 50g')).toBeInTheDocument();
   });
 
@@ -217,9 +228,9 @@ describe('AddCbuDialog Component', () => {
     // Search for "Tea"
     fireEvent.change(searchInput, { target: { value: 'Tea' } });
 
-    expect(screen.getByText('MAT_TEA_04')).toBeInTheDocument();
-    expect(screen.queryByText('MAT_AVAIL_03')).not.toBeInTheDocument();
-    expect(screen.queryByText('MAT_NEW_02')).not.toBeInTheDocument();
+    expect(screen.getByText('TEA_CBU_04')).toBeInTheDocument();
+    expect(screen.queryByText('AVAIL_CBU_03')).not.toBeInTheDocument();
+    expect(screen.queryByText('NEW_CBU_02')).not.toBeInTheDocument();
 
     // Search for non-existent material
     fireEvent.change(searchInput, { target: { value: 'XYZ9999' } });
@@ -231,9 +242,9 @@ describe('AddCbuDialog Component', () => {
     fireEvent.click(clearBtn);
 
     expect(searchInput.value).toBe('');
-    expect(screen.getByText('MAT_TEA_04')).toBeInTheDocument();
-    expect(screen.getByText('MAT_AVAIL_03')).toBeInTheDocument();
-    expect(screen.getByText('MAT_NEW_02')).toBeInTheDocument();
+    expect(screen.getByText('TEA_CBU_04')).toBeInTheDocument();
+    expect(screen.getByText('AVAIL_CBU_03')).toBeInTheDocument();
+    expect(screen.getByText('NEW_CBU_02')).toBeInTheDocument();
   });
 
   it('allows selecting fresh material, setting recQty, and confirming to add to shipment', async () => {
@@ -249,8 +260,8 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    // Check MAT_AVAIL_03
-    const availRow = screen.getByText('MAT_AVAIL_03').closest('tr');
+    // Check AVAIL_CBU_03
+    const availRow = screen.getByText('AVAIL_CBU_03').closest('tr');
     const checkbox = availRow.querySelector('input[type="checkbox"]');
     fireEvent.click(checkbox);
 
@@ -282,5 +293,55 @@ describe('AddCbuDialog Component', () => {
       );
       expect(mockOnClose).toHaveBeenCalledTimes(1);
     });
+  });
+
+  it('dynamically updates remaining eligible quantity in table and clamps recQty to not exceed eligible quantity', () => {
+    render(
+      <AddCbuDialog
+        open={true}
+        onClose={jest.fn()}
+        ind={mockInd}
+        dcLabel="BNDH"
+        plantId="U036"
+        dcId="bndh"
+      />
+    );
+
+    // Initial state: AVAIL_CBU_03 has eligible = 450
+    const availRow = screen.getByText('AVAIL_CBU_03').closest('tr');
+    expect(availRow).toHaveTextContent('450');
+
+    // Check AVAIL_CBU_03 (default qty should be 0 unless explicitly changed)
+    const checkbox = availRow.querySelector('input[type="checkbox"]');
+    fireEvent.click(checkbox);
+
+    const qtyInput = availRow.querySelector('input[type="number"]');
+    expect(qtyInput.value).toBe('0');
+    // Remaining eligible remains 450 since recQty is 0
+    expect(availRow).toHaveTextContent('450');
+
+    // Change qty to 50 -> remaining eligible should be 450 - 50 = 400
+    fireEvent.change(qtyInput, { target: { value: '50' } });
+    expect(availRow).toHaveTextContent('400');
+
+    // Change qty to 100 -> remaining eligible should be 450 - 100 = 350
+    fireEvent.change(qtyInput, { target: { value: '100' } });
+    expect(availRow).toHaveTextContent('350');
+
+    // Attempt to change qty beyond eligible pool (e.g. 500 when max is 450)
+    fireEvent.change(qtyInput, { target: { value: '500' } });
+    // Should clamp qty to 450
+    expect(qtyInput.value).toBe('450');
+    // Remaining eligible should be 0
+    expect(availRow).toHaveTextContent('0');
+
+    // Decrease qty to 20 -> remaining eligible should be 430
+    fireEvent.change(qtyInput, { target: { value: '20' } });
+    expect(qtyInput.value).toBe('20');
+    expect(availRow).toHaveTextContent('430');
+
+    // Uncheck material -> remaining eligible restores to full 450
+    fireEvent.click(checkbox);
+    expect(availRow).toHaveTextContent('450');
   });
 });

@@ -101,7 +101,7 @@ export default function AddCbuTable({
           <TableBody>
             {materials.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className={styles.emptyState}>
+                <TableCell colSpan={6} className={styles.emptyState}>
                   {totalAvailable === 0
                     ? "No additional materials available for this factory in inventory."
                     : "No materials match your search."}
@@ -109,10 +109,19 @@ export default function AddCbuTable({
               </TableRow>
             ) : (
               materials.map(mat => {
-                const code = (mat.Material || "").toUpperCase().trim();
+                const code = (mat.Material || mat.materialId || mat.cbuId || "").toUpperCase().trim();
                 const isSelected = selections[code] !== undefined;
                 const qtyVal = selections[code] ?? "";
-                const eligible = Number(mat.eligible) || 0;
+                const availablePool = Number(mat.availablePool ?? mat.eligible ?? 0);
+                const selectedRecQty = isSelected ? (parseFloat(qtyVal) || 0) : 0;
+                const remainingEligible = Math.max(0, availablePool - selectedRecQty);
+
+                let msdLossText = "0";
+                if (mat.mstn_loss_mitigation_cases > 0) {
+                  msdLossText = `${mat.mstn_loss_mitigation_cases} cs`;
+                } else if (mat.msdnLossCases > 0) {
+                  msdLossText = `${mat.msdnLossCases} cs`;
+                }
 
                 return (
                   <TableRow
@@ -123,16 +132,16 @@ export default function AddCbuTable({
                     <TableCell className={styles.checkboxCell} align="center">
                       <Checkbox
                         checked={isSelected}
-                        onChange={() => onToggleSelection(code, mat.currentRecQty)}
+                        onChange={() => onToggleSelection(code, mat.currentRecQty, availablePool)}
                         size="small"
                         sx={{ p: 0.25, color: "#d9dce1", "&.Mui-checked": { color: "#2563eb" } }}
                       />
                     </TableCell>
 
-                    {/* Material / Description & NEW badge */}
+                    {/* CBU (CBU ID & NEW badge) */}
                     <TableCell className={styles.tableCell}>
                       <div className={styles.matId}>
-                        {mat.Material}
+                        {mat.cbuId || mat.Material}
                         {mat.isAlreadyNew && (
                           <span
                             style={{
@@ -151,54 +160,41 @@ export default function AddCbuTable({
                           </span>
                         )}
                       </div>
-                      <div className={styles.matDesc}>{mat.MaterialDescription}</div>
                     </TableCell>
 
-                    {/* Source plant */}
-                    <TableCell className={styles.tableCell} align="left">
-                      <span style={{ fontSize: 11, fontWeight: 600, color: "#5a6072" }}>
-                        {mat.sourcePlant || "—"}
-                      </span>
+                    {/* Material Description */}
+                    <TableCell className={styles.tableCell}>
+                      <div className={styles.matDesc} style={{ fontSize: 11, color: "#334155" }}>
+                        {mat.MaterialDescription || "—"}
+                      </div>
                     </TableCell>
 
-                    {/* Priority */}
-                    <TableCell className={styles.tableCell} align="center">
-                      <span style={{ fontSize: 11, color: "#64748b" }}>{mat.priority || "—"}</span>
-                    </TableCell>
-
-                    {/* Order loss */}
+                    {/* MSD Loss */}
                     <TableCell className={styles.tableCell} align="center">
                       <span style={{ fontSize: 11, color: "#64748b" }}>
-                        {mat.order_loss_cases > 0 ? `${mat.order_loss_cases} cs` : "0"}
+                        {msdLossText}
                       </span>
                     </TableCell>
 
-                    {/* MSDN loss */}
+                    {/* Eligibility (updates dynamically as recQty increases/decreases) */}
                     <TableCell className={styles.tableCell} align="center">
-                      <span style={{ fontSize: 11, color: "#64748b" }}>
-                        {mat.mstn_loss_mitigation_cases > 0 ? `${mat.mstn_loss_mitigation_cases} cs` : "0"}
+                      <span style={{ fontWeight: 700, color: remainingEligible > 0 ? "#1e293b" : "#94a3b8" }}>
+                        {remainingEligible > 0 ? remainingEligible.toLocaleString() : "0"}
                       </span>
                     </TableCell>
 
-                    {/* Eligible */}
-                    <TableCell className={styles.tableCell} align="center">
-                      <span style={{ fontWeight: 700, color: eligible > 0 ? "#1e293b" : "#94a3b8" }}>
-                        {eligible > 0 ? eligible.toLocaleString() : "—"}
-                      </span>
-                    </TableCell>
-
-                    {/* Rec Qty input */}
+                    {/* Recommended Quantity (clamped to available eligible quantity) */}
                     <TableCell className={styles.tableCell} align="center">
                       <input
                         type="number"
                         min={0}
-                        max={eligible || 9999}
+                        max={availablePool}
                         step={1}
                         className={styles.qtyInput}
                         disabled={!isSelected}
                         value={isSelected ? qtyVal : ""}
                         placeholder="0"
-                        onChange={e => onQtyChange(code, e.target.value)}
+                        onChange={e => onQtyChange(code, e.target.value, availablePool)}
                         onClick={e => e.stopPropagation()}
                       />
                     </TableCell>

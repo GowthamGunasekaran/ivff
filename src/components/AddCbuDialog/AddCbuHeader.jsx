@@ -11,17 +11,16 @@ export default function AddCbuHeader({
   ind,
   dcLabel,
   sourcePlant,
-  currentUtil,
-  displayFinalUtil,
+  _currentUtil,
+  _displayFinalUtil,
   onClose,
 }) {
+  const shipmentId = ind?.shipmentId || ind?.id || "—";
+  const indentId = ind?.indent || ind?.name || ind?.id || "—";
+
   const kpis = [
-    { label: "Shipment ID", value: ind?.id || ind?.shipmentId || "—" },
-    { label: "Source Plant", value: sourcePlant },
-    { label: "Target DC", value: dcLabel || "—" },
-    { label: "Indent", value: ind?.name || ind?.indent || ind?.id || "—" },
-    { label: "Current Util", value: `${currentUtil.toFixed(1)}%` },
-    { label: "Final Util", value: `${displayFinalUtil}%`, blue: true },
+    { label: "Shipment ID", value: shipmentId },
+    { label: "Indent ID", value: indentId },
   ];
 
   return (

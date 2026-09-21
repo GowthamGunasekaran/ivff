@@ -8,6 +8,8 @@ import {
   getMaterialSearchOptions,
   extractMaterialId,
   shipmentMatchesTerm,
+  lookupMaterialRecord,
+  applyCbuInventoryDeltas,
 } from '../appContextHelpers';
 
 describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
@@ -394,6 +396,105 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
       expect(shipmentMatchesTerm(ind, 'TRIPTI')).toBe(true);
       expect(shipmentMatchesTerm(ind, 'NON_EXISTENT')).toBe(false);
       expect(shipmentMatchesTerm(ind, '')).toBe(true);
+    });
+  });
+
+  describe('applyCbuInventoryDeltas - Global Inventory Synchronization', () => {
+    it('decreases global eligible pool, calls setGlobalEligibleState, and updates factories', () => {
+      const globalEligibleRef = {
+        current: {
+          DELHI: {
+            'MAT-100': {
+              factoryName: 'DELHI',
+              code: 'MAT-100',
+              name: 'Tea Pack 250g',
+              initialEligible: 500,
+              currentEligible: 500,
+            },
+          },
+        },
+      };
+
+      const setFactories = jest.fn();
+      const setFactoryDetails = jest.fn();
+      const setGlobalEligibleState = jest.fn();
+
+      const deltas = new Map();
+      deltas.set('MAT-100', {
+        delta: 150,
+        item: {
+          Material: 'MAT-100',
+          MaterialDescription: 'Tea Pack 250g',
+          recQty: 150,
+        },
+      });
+
+      const remainingMap = applyCbuInventoryDeltas({
+        deltas,
+        resolvedFactoryName: 'DELHI',
+        globalEligibleRef,
+        setFactories,
+        setFactoryDetails,
+        setGlobalEligibleState,
+      });
+
+      // Global eligible for MAT-100 should be 500 - 150 = 350
+      expect(globalEligibleRef.current.DELHI['MAT-100'].currentEligible).toBe(350);
+      expect(setGlobalEligibleState).toHaveBeenCalledTimes(1);
+      expect(setGlobalEligibleState).toHaveBeenCalledWith(
+        expect.objectContaining({
+          DELHI: expect.objectContaining({
+            'MAT-100': expect.objectContaining({ currentEligible: 350 }),
+          }),
+        })
+      );
+      expect(setFactories).toHaveBeenCalled();
+      expect(setFactoryDetails).toHaveBeenCalled();
+      expect(remainingMap.get('MAT-100')).toBe(350);
+    });
+
+    it('matches material across factories if factory name resolution varies', () => {
+      const globalEligibleRef = {
+        current: {
+          'DELHI PLANT': {
+            'MAT-200': {
+              factoryName: 'DELHI PLANT',
+              code: 'MAT-200',
+              name: 'Coffee 100g',
+              initialEligible: 800,
+              currentEligible: 800,
+            },
+          },
+        },
+      };
+
+      const setFactories = jest.fn();
+      const setFactoryDetails = jest.fn();
+      const setGlobalEligibleState = jest.fn();
+
+      const deltas = new Map();
+      deltas.set('MAT-200', {
+        delta: 200,
+        item: {
+          Material: 'MAT-200',
+          cbuId: 'CBU-200',
+          materialId: 'MAT-200',
+          recQty: 200,
+        },
+      });
+
+      const remainingMap = applyCbuInventoryDeltas({
+        deltas,
+        resolvedFactoryName: 'delhi',
+        globalEligibleRef,
+        setFactories,
+        setFactoryDetails,
+        setGlobalEligibleState,
+      });
+
+      expect(globalEligibleRef.current['DELHI PLANT']['MAT-200'].currentEligible).toBe(600);
+      expect(setGlobalEligibleState).toHaveBeenCalledTimes(1);
+      expect(remainingMap.get('MAT-200')).toBe(600);
     });
   });
 });

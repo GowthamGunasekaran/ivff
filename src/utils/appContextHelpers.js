@@ -69,21 +69,15 @@ export function getFactoryEligibleMap(factoryKey, eligibleMap) {
   return null;
 }
 
-// Helper: Look up material from global eligible map by code, id, or description
-export function lookupMaterialRecord(factoryName, sku, eligibleMap) {
-  const fMap = getFactoryEligibleMap(factoryName, eligibleMap);
+function findInFactoryMap(fMap, codeKey, descKey) {
   if (!fMap) return null;
-  const codeKey = (sku.Material || sku.code || sku.id || sku.cbu || sku.sku || sku.dc || "").toUpperCase().trim();
-  const descKey = (sku.MaterialDescription || sku.desc || sku.name || sku.location || "").toUpperCase().trim();
-
   if (codeKey && fMap[codeKey]) return fMap[codeKey];
   if (descKey && fMap[descKey]) return fMap[descKey];
 
-  // Fuzzy match within this factory's materials
   for (const mKey of Object.keys(fMap)) {
     const rec = fMap[mKey];
-    const recCode = (rec.code || rec.dc || "").toUpperCase().trim();
-    const recName = (rec.name || rec.location || "").toUpperCase().trim();
+    const recCode = (rec.code || rec.dc || rec.Material || rec.materialId || rec.cbuId || "").toUpperCase().trim();
+    const recName = (rec.name || rec.location || rec.MaterialDescription || "").toUpperCase().trim();
     if (codeKey && recCode && (recCode === codeKey || recCode.includes(codeKey) || codeKey.includes(recCode))) {
       return rec;
     }
@@ -91,6 +85,28 @@ export function lookupMaterialRecord(factoryName, sku, eligibleMap) {
       return rec;
     }
   }
+  return null;
+}
+
+// Helper: Look up material from global eligible map by code, id, or description
+export function lookupMaterialRecord(factoryName, sku, eligibleMap) {
+  if (!eligibleMap || !sku) return null;
+
+  const codeKey = (sku.Material || sku.materialId || sku.cbuId || sku.code || sku.id || sku.cbu || sku.sku || sku.dc || "").toUpperCase().trim();
+  const descKey = (sku.MaterialDescription || sku.desc || sku.name || sku.location || "").toUpperCase().trim();
+
+  // 1. Try specified factory
+  const targetFactory = sku.factoryName || factoryName;
+  const fMap = targetFactory ? getFactoryEligibleMap(targetFactory, eligibleMap) : null;
+  const matched = findInFactoryMap(fMap, codeKey, descKey);
+  if (matched) return matched;
+
+  // 2. Global fallback across all factories in eligibleMap
+  for (const [, map] of Object.entries(eligibleMap)) {
+    const found = findInFactoryMap(map, codeKey, descKey);
+    if (found) return found;
+  }
+
   return null;
 }
 
@@ -345,10 +361,12 @@ export function updateFactoryListInventory(factories, resolvedFactoryName, isMat
     const cleanFn = cleanEntityKey(fn);
     const cleanTarget = cleanEntityKey(resolvedFactoryName);
     const isTargetFactory =
+      !resolvedFactoryName ||
       fn === resolvedFactoryName ||
       cleanFn === cleanTarget ||
       (cleanFn && cleanTarget && (cleanFn.includes(cleanTarget) || cleanTarget.includes(cleanFn)));
-    if (!isTargetFactory) return f;
+    const hasMatch = (f.children || []).some(m => isMatch(m));
+    if (!isTargetFactory && !hasMatch) return f;
 
     const updatedChildren = (f.children || []).map(m =>
       isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
@@ -371,7 +389,9 @@ export function updateFactoryDetailsInventory(prevD, resolvedFactoryName, isMatc
   const updatedD = { ...prevD };
   for (const k of Object.keys(updatedD)) {
     const kClean = cleanEntityKey(k);
-    if (k === resolvedFactoryName || kClean === cleanTarget) {
+    const isTarget = !resolvedFactoryName || k === resolvedFactoryName || kClean === cleanTarget;
+    const hasMatch = (updatedD[k] || []).some(m => isMatch(m));
+    if (isTarget || hasMatch) {
       updatedD[k] = updatedD[k].map(m =>
         isMatch(m) ? { ...m, eligible: newRemainingEligible } : m
       );
@@ -982,6 +1002,30 @@ export function syncCbuDeltaAndChildren(prevChildren = [], newSkus = []) {
   return { updatedChildren, deltas, hasChanges };
 }
 
+function buildSkuMatchFunction(code, item) {
+  const itemCodes = new Set([
+    (code || "").toUpperCase().trim(),
+    (item?.Material || "").toUpperCase().trim(),
+    (item?.materialId || "").toUpperCase().trim(),
+    (item?.cbuId || "").toUpperCase().trim(),
+    (item?.code || "").toUpperCase().trim(),
+    (item?.id || "").toUpperCase().trim(),
+  ].filter(Boolean));
+
+  const itemNames = new Set([
+    (item?.MaterialDescription || "").toUpperCase().trim(),
+    (item?.name || "").toUpperCase().trim(),
+    (item?.desc || "").toUpperCase().trim(),
+    (item?.location || "").toUpperCase().trim(),
+  ].filter(Boolean));
+
+  return (elem) => {
+    const elemCode = (elem.code || elem.dc || elem.Material || elem.materialId || elem.cbuId || elem.id || "").toUpperCase().trim();
+    const elemName = (elem.name || elem.location || elem.MaterialDescription || elem.desc || "").toUpperCase().trim();
+    return (elemCode && itemCodes.has(elemCode)) || (elemName && itemNames.has(elemName));
+  };
+}
+
 /**
  * Applies inventory deltas to global eligible ref, factory list, and factory details.
  */
@@ -994,29 +1038,37 @@ export function applyCbuInventoryDeltas({
   setGlobalEligibleState,
 }) {
   let globalChanged = false;
+  const remainingMap = new Map();
+
   for (const [code, { delta, item }] of deltas.entries()) {
     if (delta === 0) continue;
 
     const matRecord = lookupMaterialRecord(resolvedFactoryName, item, globalEligibleRef.current);
-    if (matRecord) {
-      const currentPool = Number(matRecord.currentEligible ?? matRecord.initialEligible ?? 0);
-      const newRemaining = Math.max(0, currentPool - delta);
-      matRecord.currentEligible = newRemaining;
-      globalChanged = true;
+    if (!matRecord) continue;
 
-      const isMatch = (elem) => {
-        const elemCode = (elem.code || elem.dc || elem.Material || "").toUpperCase().trim();
-        return elemCode === code;
-      };
+    const currentPool = Number(matRecord.currentEligible ?? matRecord.initialEligible ?? 0);
+    const newRemaining = Math.max(0, currentPool - delta);
+    matRecord.currentEligible = newRemaining;
+    globalChanged = true;
 
-      setFactories(prevF => updateFactoryListInventory(prevF, resolvedFactoryName, isMatch, newRemaining));
-      setFactoryDetails(prevD => updateFactoryDetailsInventory(prevD, resolvedFactoryName, isMatch, newRemaining));
-    }
+    remainingMap.set(code, newRemaining);
+    if (matRecord.code) remainingMap.set(String(matRecord.code).toUpperCase().trim(), newRemaining);
+    if (item?.Material) remainingMap.set(String(item.Material).toUpperCase().trim(), newRemaining);
+    if (item?.materialId) remainingMap.set(String(item.materialId).toUpperCase().trim(), newRemaining);
+    if (item?.cbuId) remainingMap.set(String(item.cbuId).toUpperCase().trim(), newRemaining);
+
+    const targetFactory = matRecord.factoryName || resolvedFactoryName;
+    const isMatch = buildSkuMatchFunction(code, item);
+
+    setFactories(prevF => updateFactoryListInventory(prevF, targetFactory, isMatch, newRemaining));
+    setFactoryDetails(prevD => updateFactoryDetailsInventory(prevD, targetFactory, isMatch, newRemaining));
   }
 
   if (globalChanged) {
     setGlobalEligibleState({ ...globalEligibleRef.current });
   }
+
+  return remainingMap;
 }
 
 

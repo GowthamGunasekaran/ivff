@@ -7,13 +7,11 @@ import { recalcShipment } from "../../utils/appContextHelpers";
 
 export const HEADERS = [
   { label: "", width: 36, align: "center" },
-  { label: "Material / CBU", width: 200, align: "left" },
-  { label: "Source Plant", width: 110, align: "left" },
-  { label: "Priority", width: 70, align: "center" },
-  { label: "Order Loss", width: 90, align: "center" },
-  { label: "MSDN Loss", width: 90, align: "center" },
-  { label: "Eligible", width: 75, align: "center" },
-  { label: "Rec Qty", width: 85, align: "center" },
+  { label: "CBU", width: 140, align: "left" },
+  { label: "Material Description", width: 260, align: "left" },
+  { label: "MSD Loss", width: 100, align: "center" },
+  { label: "Eligibility", width: 100, align: "center" },
+  { label: "Recommended Quantity", width: 140, align: "center" },
 ];
 
 export function resolveUtil(val) {
@@ -102,7 +100,7 @@ export function getAvailableMaterials(globalEligibleState, ind, skus) {
   const seen = new Set();
   const materials = [];
 
-  for (const [, matMap] of Object.entries(globalEligibleState || {})) {
+  for (const [fKey, matMap] of Object.entries(globalEligibleState || {})) {
     if (!matMap || typeof matMap !== "object") continue;
     for (const [code, record] of Object.entries(matMap)) {
       if (!code || code === "undefined") continue;
@@ -126,20 +124,24 @@ export function getAvailableMaterials(globalEligibleState, ind, skus) {
       const isAlreadyNew = newKeys.has(compositeKey) || newMats.has(materialId);
       const existingNewSku = isAlreadyNew ? newMap.get(compositeKey) || newMap.get(materialId) : null;
       const currentRecQty = existingNewSku ? parseFloat(existingNewSku.recQty) || 0 : 0;
-      const eligible = Number(record?.currentEligible ?? record?.eligible ?? record?.eligibleQty ?? 0);
+      const currentEligible = Number(record?.currentEligible ?? record?.eligible ?? record?.eligibleQty ?? 0);
+      const availablePool = Math.max(0, currentEligible + (isAlreadyNew ? currentRecQty : 0));
 
       materials.push({
-        cbuId,
+        factoryName: record?.factoryName || fKey,
+        cbuId: cbuId || record?.cbuId || record?.cbu || normalizedCode,
         materialId,
         Material: normalizedCode,
         MaterialDescription: record?.MaterialDescription || record?.name || record?.desc || normalizedCode,
-        eligible,
+        eligible: availablePool,
+        availablePool,
         weight: record?.weight || record?.csWeight || 0,
         csWeight: record?.csWeight || 0,
         priority: record?.priority || "Low",
         sourcePlant: record?.sourcePlant || ind?.sendingPlantCode || "—",
         order_loss_cases: record?.order_loss_cases || 0,
-        mstn_loss_mitigation_cases: record?.mstn_loss_mitigation_cases || 0,
+        mstn_loss_mitigation_cases: record?.mstn_loss_mitigation_cases || record?.msdnLossCases || 0,
+        msdnLossCases: record?.msdnLossCases || record?.mstn_loss_mitigation_cases || 0,
         isAlreadyNew,
         currentRecQty,
       });
@@ -161,21 +163,27 @@ export function getAvailableMaterials(globalEligibleState, ind, skus) {
     if (!normalizedCode || seen.has(normalizedCode)) return;
     seen.add(normalizedCode);
 
-    const eligible = Number(sku.eligible ?? sku.eligible_stock_cases ?? sku.eligibleQuantity ?? 0);
+    const currentRecQty = parseFloat(sku.recQty) || 0;
+    const currentEligible = Number(sku.eligible ?? sku.eligible_stock_cases ?? sku.eligibleQuantity ?? 0);
+    const availablePool = Math.max(0, currentEligible + currentRecQty);
+
     materials.push({
-      cbuId,
+      factoryName: sku.factoryName || sku.actual_source_plant_code || sku.sourcePlant || ind?.sendingPlantCode || "",
+      cbuId: cbuId || sku.cbuId || sku.cbu || normalizedCode,
       materialId,
       Material: normalizedCode,
       MaterialDescription: sku.MaterialDescription || sku.name || sku.desc || normalizedCode,
-      eligible,
+      eligible: availablePool,
+      availablePool,
       weight: sku.weight || sku.csWeight || 0,
       csWeight: sku.csWeight || resolveSkuCaseWeight(sku),
       priority: sku.priority || "Low",
       sourcePlant: sku.actual_source_plant_code || sku.sourcePlant || ind?.sendingPlantCode || "—",
       order_loss_cases: sku.order_loss_cases || 0,
-      mstn_loss_mitigation_cases: sku.mstn_loss_mitigation_cases || 0,
+      mstn_loss_mitigation_cases: sku.mstn_loss_mitigation_cases || sku.msdnLossCases || 0,
+      msdnLossCases: sku.msdnLossCases || sku.mstn_loss_mitigation_cases || 0,
       isAlreadyNew: true,
-      currentRecQty: parseFloat(sku.recQty) || 0,
+      currentRecQty,
     });
   });
 

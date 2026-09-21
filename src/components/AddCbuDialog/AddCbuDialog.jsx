@@ -76,27 +76,41 @@ export default function AddCbuDialog({ open, onClose, ind, dcLabel, plantId, dcI
         const code = (materialId || cbuId || sku.Material || "").toUpperCase().trim();
         if (code) {
           const curRec = parseFloat(sku.recQty) || 0;
-          initial[code] = curRec > 0 ? String(curRec) : "1";
+          initial[code] = curRec > 0 ? String(curRec) : "0";
         }
       }
     });
     setSelections(initial);
   }, [open, ind]);
 
-  const toggleSelection = useCallback((code, currentRec = 0) => {
+  const toggleSelection = useCallback((code, currentRec = 0, maxLimit = 0) => {
     setSelections(prev => {
       if (prev[code] !== undefined) {
         const next = { ...prev };
         delete next[code];
         return next;
       }
-      const initialQty = currentRec > 0 ? String(currentRec) : "1";
-      return { ...prev, [code]: initialQty };
+      let initialQty = currentRec > 0 ? currentRec : 0;
+      if (maxLimit > 0) {
+        initialQty = Math.min(initialQty, maxLimit);
+      }
+      return { ...prev, [code]: String(initialQty) };
     });
   }, []);
 
-  const setQty = useCallback((code, val) => {
-    setSelections(prev => ({ ...prev, [code]: val }));
+  const setQty = useCallback((code, rawVal, maxLimit) => {
+    if (rawVal === "") {
+      setSelections(prev => ({ ...prev, [code]: "" }));
+      return;
+    }
+    const parsed = parseFloat(rawVal);
+    if (isNaN(parsed)) {
+      setSelections(prev => ({ ...prev, [code]: "" }));
+      return;
+    }
+    const max = typeof maxLimit === "number" && maxLimit >= 0 ? maxLimit : Infinity;
+    const clamped = Math.max(0, Math.min(parsed, max));
+    setSelections(prev => ({ ...prev, [code]: String(clamped) }));
   }, []);
 
   const selectedCount = useMemo(() => {
@@ -133,7 +147,9 @@ export default function AddCbuDialog({ open, onClose, ind, dcLabel, plantId, dcI
       })
       .map(m => {
         const code = (m.Material || m.materialId || "").toUpperCase().trim();
-        const qty = parseFloat(selections[code]) || 0;
+        const maxLimit = Number(m.availablePool ?? m.eligible ?? 0);
+        const rawQty = parseFloat(selections[code]) || 0;
+        const qty = maxLimit > 0 ? Math.min(rawQty, maxLimit) : rawQty;
         return {
           ...m,
           recQty: qty,

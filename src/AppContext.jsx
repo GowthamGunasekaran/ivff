@@ -248,23 +248,35 @@ export const AppProvider = ({ children }) => {
 
   // Add new CBU materials to an existing shipment, support removing unchecked materials, and sync with global inventory
   const addCbuToShipment = useCallback((plantId, dcId, indId, newSkus = []) => {
-    const resolvedFactoryName = resolveFactoryName(plantId, plantsDataRef.current, factoriesRef.current);
-
     setDcShipmentsCache(prev => {
-      const cacheKey = `${plantId}_${dcId}`;
-      const shipments = prev[cacheKey] || [];
-      const indIndex = shipments.findIndex(s => s.id === indId);
+      let targetCacheKey = `${plantId}_${dcId}`;
+      let shipments = prev[targetCacheKey] || [];
+      let indIndex = shipments.findIndex(s => s.id === indId);
+
+      if (indIndex === -1) {
+        for (const [k, list] of Object.entries(prev)) {
+          const idx = (list || []).findIndex(s => s.id === indId);
+          if (idx !== -1) {
+            targetCacheKey = k;
+            shipments = list;
+            indIndex = idx;
+            break;
+          }
+        }
+      }
       if (indIndex === -1) return prev;
 
       const current = shipments[indIndex];
       const prevChildren = current.children || [];
+      const actualPlantId = current.sendingPlantCode || current.sourcePlant || plantId || targetCacheKey.split("_")[0];
+      const resolvedFactoryName = resolveFactoryName(actualPlantId, plantsDataRef.current, factoriesRef.current);
 
       const { updatedChildren, deltas, hasChanges } = syncCbuDeltaAndChildren(prevChildren, newSkus);
       if (!hasChanges && updatedChildren.length === prevChildren.length) {
         return prev;
       }
 
-      applyCbuInventoryDeltas({
+      const remainingMap = applyCbuInventoryDeltas({
         deltas,
         resolvedFactoryName,
         globalEligibleRef,
@@ -273,15 +285,45 @@ export const AppProvider = ({ children }) => {
         setGlobalEligibleState,
       });
 
-      const recalculated = recalcShipment(current, updatedChildren);
-      const newShipments = [
-        ...shipments.slice(0, indIndex),
-        recalculated,
-        ...shipments.slice(indIndex + 1),
-      ];
+      // Update eligible quantity on updatedChildren for this shipment
+      const finalChildren = updatedChildren.map(c => {
+        const code = (c.Material || c.materialId || c.cbuId || c.code || "").toUpperCase().trim();
+        if (remainingMap && remainingMap.has(code)) {
+          return { ...c, eligible: remainingMap.get(code) };
+        }
+        return c;
+      });
+
+      const recalculated = recalcShipment(current, finalChildren);
+
+      // Synchronize remaining eligible across all shipments in the cache
+      const newCache = {};
+      for (const [k, list] of Object.entries(prev)) {
+        if (k === targetCacheKey) {
+          const updatedList = [
+            ...list.slice(0, indIndex),
+            recalculated,
+            ...list.slice(indIndex + 1),
+          ];
+          newCache[k] = updatedList;
+        } else {
+          newCache[k] = (list || []).map(shipment => {
+            let changed = false;
+            const ch = (shipment.children || []).map(s => {
+              const code = (s.Material || s.materialId || s.cbuId || s.code || "").toUpperCase().trim();
+              if (remainingMap && remainingMap.has(code)) {
+                changed = true;
+                return { ...s, eligible: remainingMap.get(code) };
+              }
+              return s;
+            });
+            return changed ? recalcShipment(shipment, ch) : shipment;
+          });
+        }
+      }
 
       setReviewInd(cur => (cur?.id === indId ? recalculated : cur));
-      return { ...prev, [cacheKey]: newShipments };
+      return newCache;
     });
   }, []);
 
@@ -527,6 +569,7 @@ export const AppProvider = ({ children }) => {
     handleRecChange,
     updateShipmentStatus,
     confirmAndDispatchPlan,
+    addCbuToShipment,
     showToast,
   ]);
 
