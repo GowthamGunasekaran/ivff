@@ -30,6 +30,7 @@ import {
   refreshDashboardAfterDispatch,
   calculateRecMetrics,
   buildInitialDashboardPayload,
+  submitShipmentCbuChanges,
 } from "./utils/appContextHelpers";
 
 // Re-export all helpers for seamless backward-compatibility
@@ -242,6 +243,41 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
+  // Handler for adding/updating CBUs in a shipment
+  const handleAddCbuSubmit = useCallback((plantId, dcId, indId, selectedCbus) => {
+    const resolvedFactoryName = resolveFactoryName(plantId, plantsDataRef.current, factoriesRef.current);
+
+    setDcShipmentsCache(prev => {
+      const result = submitShipmentCbuChanges({
+        prevCache: prev,
+        plantId,
+        dcId,
+        indId,
+        selectedCbus,
+        resolvedFactoryName,
+        globalEligibleMap: globalEligibleRef.current,
+      });
+
+      if (!result) return prev;
+
+      const { newCache, updatedTargetInd, inventoryDeltas } = result;
+
+      // Update globalEligibleState, factories, and factoryDetails for all delta records
+      setGlobalEligibleState({ ...globalEligibleRef.current });
+
+      (inventoryDeltas || []).forEach(({ isMatch, newRemainingEligible }) => {
+        setFactories(prevF => updateFactoryListInventory(prevF, resolvedFactoryName, isMatch, newRemainingEligible));
+        setFactoryDetails(prevD => updateFactoryDetailsInventory(prevD, resolvedFactoryName, isMatch, newRemainingEligible));
+      });
+
+      if (updatedTargetInd) {
+        setReviewInd(cur => (cur?.id === indId ? updatedTargetInd : cur));
+      }
+
+      return newCache;
+    });
+  }, []);
+
   const updateShipmentStatus = useCallback((plantId, dcId, indId, newStatus) => {
     const cacheKey = `${plantId}_${dcId}`;
     setDcShipmentsCache(prev => {
@@ -432,6 +468,7 @@ export const AppProvider = ({ children }) => {
     reviewDc,
     setReviewDc,
     handleRecChange,
+    handleAddCbuSubmit,
     globalEligibleState,
     updateShipmentStatus,
     confirmAndDispatchPlan,
@@ -481,6 +518,7 @@ export const AppProvider = ({ children }) => {
     reviewInd,
     reviewDc,
     handleRecChange,
+    handleAddCbuSubmit,
     updateShipmentStatus,
     confirmAndDispatchPlan,
     showToast,

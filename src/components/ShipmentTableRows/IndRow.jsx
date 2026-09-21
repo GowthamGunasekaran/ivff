@@ -49,8 +49,9 @@ function resolveFinalUtil(ind, initialUtil) {
 }
 
 function resolveWeightDisplay(ind, totalNetWeight) {
-  if (typeof ind.weight === "number") return `${ind.weight}T`;
-  if (ind.weight) return ind.weight;
+  const cap = ind.truckCap || ind.capacity || ind.capcity || ind.weight;
+  if (typeof cap === "number") return `${cap}T`;
+  if (cap) return typeof cap === "string" && cap.endsWith("T") ? cap : `${cap}T`;
   if (totalNetWeight > 0) return `${totalNetWeight.toFixed(1)}T`;
   return "18T";
 }
@@ -219,7 +220,7 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   );
 });
 
-export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, dcLabel }) {
+export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, onAddCbu, dcLabel }) {
   const skus = ind.children || [];
 
   const displayedSkus = useMemo(() => {
@@ -267,7 +268,10 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
                 {!searchTerm && (
                   <TableRow>
                     <TableCell colSpan={12} className={styles.skuCellAdd}>
-                      <button className={styles.skuBtnAdd}>
+                      <button
+                        className={styles.skuBtnAdd}
+                        onClick={() => onAddCbu && onAddCbu(ind, dcLabel)}
+                      >
                         <AddIcon className={styles.skuIconAdd} /> Add CBU
                       </button>
                     </TableCell>

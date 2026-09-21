@@ -13,7 +13,8 @@ export default function ReviewHeader({ ind, dcLabel, onClose, metrics }) {
   const finalUtil = ind.utilTo || `${metrics.finalUtil.toFixed(1)}%`;
   const utilGainVal = Math.max(0, parseFloat(finalUtil) - parseFloat(currentUtil));
   const isHighRisk = parseFloat(finalUtil) > 100.0;
-  const capacityT = ind.weight || `${metrics.capacityT || 10}T`;
+  const capVal = ind.truckCap || ind.capacity || ind.weight;
+  const capacityT = capVal ? (typeof capVal === "string" && capVal.endsWith("T") ? capVal : `${capVal}T`) : `${metrics.capacityT || 10}T`;
 
   const kpis = [
     { label: "Current Util", value: currentUtil, colorClass: styles.kpiValueDark },

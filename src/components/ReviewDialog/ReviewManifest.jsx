@@ -21,6 +21,22 @@ const HEADERS = [
   { label: "Tonnage", width: 75, align: "right" },
 ];
 
+/**
+ * Determines whether a manifest row represents a newly added CBU
+ * @param {Object} row
+ * @returns {boolean}
+ */
+export function isReviewRowNew(row) {
+  if (!row) return false;
+  return Boolean(
+    row.isAdded ||
+    row.tag === "NEW" ||
+    row.sku?.isAdded ||
+    row.sku?.tag === "NEW" ||
+    row.sku?.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU"
+  );
+}
+
 export default function ReviewManifest({ manifestData }) {
   const { rows, totalFinal, totalWeight, totalTonnage } = manifestData;
 
@@ -46,14 +62,34 @@ export default function ReviewManifest({ manifestData }) {
             </TableRow>
           </TableHead>
           <TableBody>
-            {rows.map((row, idx) => (
-              <TableRow key={row.cbu + idx} className={row.isAi ? styles.tableRowAi : styles.tableRow}>
-                <TableCell className={styles.tableCell}>
-                  <div className={row.isAi ? styles.cbuNameAi : styles.cbuName}>{row.cbu}</div>
-                  <span className={row.isAi ? styles.tagBadgeAi : styles.tagBadgeOrig}>
-                    {row.isAi ? "AI RECOMMENDATION" : "ORIGINAL"}
-                  </span>
-                </TableCell>
+            {rows.map((row, idx) => {
+              const isNew = isReviewRowNew(row);
+              const materialCode = row.material || row.sku?.Material || row.sku?.id || "";
+              const description = row.description || row.sku?.MaterialDescription || row.cbu;
+
+              return (
+                <TableRow key={(materialCode || row.cbu) + idx} className={row.isAi ? styles.tableRowAi : styles.tableRow}>
+                  <TableCell className={styles.tableCell}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                      <span className={row.isAi ? styles.cbuNameAi : styles.cbuName}>
+                        {materialCode || description}
+                      </span>
+                      {row.isAi && (
+                        <span className={styles.tagBadgeAi}>AI RECOMMENDATION</span>
+                      )}
+                      {isNew && (
+                        <span className={styles.tagBadgeNew}>NEW CBU</span>
+                      )}
+                      {!row.isAi && !isNew && (
+                        <span className={styles.tagBadgeOrig}>ORIGINAL</span>
+                      )}
+                    </div>
+                    {materialCode && description && materialCode !== description && (
+                      <div style={{ fontSize: 10, color: "#64748b", marginTop: 2, lineHeight: 1.2 }}>
+                        {description}
+                      </div>
+                    )}
+                  </TableCell>
                 <TableCell className={`${styles.tableCell} ${styles.tableCellSecondary}`}>
                   {row.source}
                 </TableCell>
@@ -72,8 +108,9 @@ export default function ReviewManifest({ manifestData }) {
                 <TableCell align="right" className={`${styles.tableCell} ${styles.tableCellSecondary}`}>
                   {row.tonnage.toFixed(2)}
                 </TableCell>
-              </TableRow>
-            ))}
+                </TableRow>
+              );
+            })}
             <TableRow className={styles.tableFooterRow}>
               <TableCell colSpan={4} className={styles.tableFooterCell}>TOTAL</TableCell>
               <TableCell align="center" className={`${styles.tableFooterCell} ${styles.tableFooterValLg}`}>

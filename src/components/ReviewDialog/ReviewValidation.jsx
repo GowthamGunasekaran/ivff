@@ -23,7 +23,7 @@ function parseFinalUtil(utilTo, fallback) {
 }
 
 export default function ReviewValidation({ ind, metrics, totalCases }) {
-  const capacityT = parseFloat(ind.weight) || 18.0;
+  const capacityT = parseFloat(ind.truckCap || ind.capacity || ind.weight) || 18.0;
   const currentUtil = parseCurrentUtil(ind.utilFrom);
   const finalUtil = parseFinalUtil(ind.utilTo, metrics?.finalUtil);
   const utilGainVal = Math.max(0, finalUtil - currentUtil);

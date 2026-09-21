@@ -2091,6 +2091,38 @@ export const mockShipmentDetailsByDc = {
           "risk_flag": "p1",
           "status": "Accepted",
           "weight": 4
+        },
+        {
+          "Material": "DTBD1R1",
+          "MaterialDescription": "DMX DIST TLT CLNR UPRO 5 LTR",
+          "source_bucket": "OUT_OF_SHIPMENT_NEW_CBU",
+          "Shipment_Priority": "Medium",
+          "risk_flag": "p2",
+          "msdnLossCases": 85,
+          "mstn_loss_mitigation_cases": 85,
+          "eligible": 500,
+          "recQty": "0.000",
+          "cs": 0,
+          "ord_qty": 0,
+          "weight": 5,
+          "netweight": "0.000",
+          "status": "Pending"
+        },
+        {
+          "Material": "DXOC1R9",
+          "MaterialDescription": "DOMEX OXY PWR BLEACH 750ML",
+          "source_bucket": "OUT_OF_SHIPMENT_NEW_CBU",
+          "Shipment_Priority": "High",
+          "risk_flag": "p1",
+          "msdnLossCases": 40,
+          "mstn_loss_mitigation_cases": 40,
+          "eligible": 800,
+          "recQty": "0.000",
+          "cs": 0,
+          "ord_qty": 0,
+          "weight": 4,
+          "netweight": "0.000",
+          "status": "Pending"
         }
       ]
     },

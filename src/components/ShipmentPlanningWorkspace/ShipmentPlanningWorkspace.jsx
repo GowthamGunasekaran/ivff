@@ -17,6 +17,7 @@ import InputAdornment from "@mui/material/InputAdornment";
 import SearchIcon from "@mui/icons-material/Search";
 import { useAppContext } from "../../AppContext";
 import ReviewDialog from "../ReviewDialog/ReviewDialog";
+import AddCbuDialog from "../AddCbuDialog/AddCbuDialog";
 import SearchResultPanel from "../SearchResultPanel/SearchResultPanel";
 import { PlantRow } from "../ShipmentTableRows/ShipmentTableRows";
 import { getMaterialSearchOptions } from "../../utils/appContextHelpers";
@@ -68,6 +69,37 @@ export default function ShipmentPlanningWorkspace() {
   // Pagination State (10 records per page)
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+
+  // Add CBU Dialog State
+  const [addCbuInd, setAddCbuInd] = useState(null);
+  const [addCbuDc, setAddCbuDc] = useState("");
+  const [addCbuPlant, setAddCbuPlant] = useState("");
+
+  const activeAddCbuInd = useMemo(() => {
+    if (!addCbuInd) return null;
+    const directKey = `${addCbuPlant}_${addCbuDc}`;
+    const lowerKey = directKey.toLowerCase();
+    const list = dcShipmentsCache[directKey] || dcShipmentsCache[lowerKey] || [];
+    const found = list.find(s => String(s.id) === String(addCbuInd.id) || String(s.shipmentId) === String(addCbuInd.id));
+    if (found) return found;
+
+    for (const shipList of Object.values(dcShipmentsCache || {})) {
+      if (!Array.isArray(shipList)) continue;
+      const sMatch = shipList.find(s => String(s.id) === String(addCbuInd.id) || String(s.shipmentId) === String(addCbuInd.id));
+      if (sMatch) return sMatch;
+    }
+    return addCbuInd;
+  }, [addCbuInd, addCbuPlant, addCbuDc, dcShipmentsCache]);
+
+  const activeReviewInd = useMemo(() => {
+    if (!reviewInd) return null;
+    for (const shipList of Object.values(dcShipmentsCache || {})) {
+      if (!Array.isArray(shipList)) continue;
+      const match = shipList.find(s => String(s.id) === String(reviewInd.id) || String(s.shipmentId) === String(reviewInd.id));
+      if (match) return match;
+    }
+    return reviewInd;
+  }, [reviewInd, dcShipmentsCache]);
 
   const cbuOptions = useMemo(() => {
     return getMaterialSearchOptions(filterDefs, dcShipmentsCache);
@@ -224,6 +256,11 @@ export default function ShipmentPlanningWorkspace() {
                   onRecChange={handleRecChange}
                   searchTerm={debouncedSearchTerm ? debouncedSearchTerm.trim() : ""}
                   onReview={(ind, dcLabel) => { setReviewInd(ind); setReviewDc(dcLabel); }}
+                  onAddCbu={(ind, dcId, plantId, dcLabel) => {
+                    setAddCbuInd(ind);
+                    setAddCbuDc(dcId || dcLabel);
+                    setAddCbuPlant(plantId);
+                  }}
                   dcShipmentsCache={dcShipmentsCache}
                   dcLoadingState={dcLoadingState}
                   dcErrorState={dcErrorState}
@@ -298,7 +335,14 @@ export default function ShipmentPlanningWorkspace() {
         </div>
       </div>
 
-      <ReviewDialog open={!!reviewInd} ind={reviewInd} dcLabel={reviewDc} onClose={() => setReviewInd(null)} />
+      <ReviewDialog open={!!reviewInd} ind={activeReviewInd} dcLabel={reviewDc} onClose={() => setReviewInd(null)} />
+      <AddCbuDialog
+        open={!!addCbuInd}
+        ind={activeAddCbuInd}
+        dcLabel={addCbuDc}
+        plantId={addCbuPlant}
+        onClose={() => setAddCbuInd(null)}
+      />
     </div>
   );
 }

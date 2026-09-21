@@ -40,7 +40,9 @@ function computeManifest(skus) {
 
   const rows = (skus || []).map((sku) => {
     const isAi = !!sku.fill;
-    const name = sku.MaterialDescription || sku.Material;
+    const material = sku.Material || sku.material || sku.materialId || sku.id || "";
+    const description = sku.MaterialDescription || sku.materialDescription || sku.desc || sku.name || material;
+    const name = description || material;
     const source = "FACTORY";
     const origCs = Number(sku.cs) || Number(sku.ord_qty) || 0;
     const recCs = parseFloat(sku.recQty) || 0;
@@ -48,6 +50,12 @@ function computeManifest(skus) {
     const csWeight = resolveCaseWeight(sku);
     const weightKg = Math.round(finalCs * csWeight * 1000);
     const tonnage = parseFloat((finalCs * csWeight).toFixed(3));
+    const isNew = Boolean(
+      sku.isAdded ||
+      sku.userAdded ||
+      sku.tag === "NEW" ||
+      sku.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU"
+    );
 
     totalFinal += finalCs;
     totalWeight += weightKg;
@@ -56,17 +64,18 @@ function computeManifest(skus) {
 
     return {
       cbu: name,
-      material: sku.Material || sku.material || sku.materialId,
+      material,
+      description,
       source,
-      tag: isAi ? "AI" : "ORIGINAL",
+      tag: isAi ? "AI" : (isNew ? "NEW" : "ORIGINAL"),
       origQty: origCs > 0 ? origCs : "—",
-      recQty: recCs > 0 ? recCs : "—",
+      recQty: recCs > 0 ? recCs : (isNew ? 0 : "—"),
       final: finalCs,
       weight: weightKg,
       tonnage,
       isAi,
       isEdited: Boolean(sku.isEdited || sku.userEdited),
-      isAdded: Boolean(sku.isAdded || sku.userAdded),
+      isAdded: isNew,
       baseRecQty: sku.baseRecQty,
       eligible: sku.eligible,
       csWeight,
@@ -108,7 +117,7 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
   const metrics = useMemo(() => {
     if (!ind) return { baseWeightT: 0, addedWeightT: 0, finalWeightT: 0, finalUtil: 0, loadCap: 100.0 };
 
-    const capacityT = parseFloat(ind.weight) || 18.0;
+    const capacityT = parseFloat(ind.truckCap || ind.capacity || ind.weight) || 18.0;
     const baseUtilNum = computeBaseUtilNum(ind.utilFrom);
     const loadCap = 100.0; // Static 100% capacity cap
     const baseWeightT = (baseUtilNum / 100) * capacityT;
@@ -134,6 +143,7 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
     const manifestPayload = manifestData.rows.map((row) => ({
       cbu: row.cbu,
       material: row.material,
+      description: row.description || row.cbu,
       source: row.source,
       tag: row.tag,
       origQty: row.origQty === "—" ? null : row.origQty,

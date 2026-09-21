@@ -156,6 +156,17 @@
   color: #15803d;
 }
 
+.tagBadgeNew {
+  display: inline-block;
+  margin-top: 2px;
+  font-weight: 700;
+  font-size: 7.5px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: #fef3c7;
+  color: #b45309;
+}
+
 .tableCellSecondary {
   font-size: 10.5px !important;
   color: #64748b !important;

@@ -227,6 +227,16 @@ export function recalcShipment(ind, children) {
     final_utilization: finalUtil,
   }));
 
+  // Fixed truck capacity (capability, e.g. 18T or 14T).
+  // Kept constant so adding recommended quantities only increases final utilization, not the net truck capability.
+  const fixedCapacity =
+    parseFloat(ind.truckCap) ||
+    parseFloat(ind.capacity) ||
+    parseFloat(ind.capcity) ||
+    parseFloat(children[0]?.capacity) ||
+    parseFloat(ind.weight) ||
+    truckCap;
+
   return {
     ...ind,
     children: updatedChildren,
@@ -235,9 +245,10 @@ export function recalcShipment(ind, children) {
     utilFrom: initialUtil,
     utilTo: finalUtil,
     finalUtilNum: finalUtil,
-    weight: newGrossWeightT,
+    weight: fixedCapacity,
+    grossWeight: newGrossWeightT,
     caseWeight: newCaseWeightT,
-    truckCap,
+    truckCap: fixedCapacity,
     baseGrossWeight: baseWeightT,
     baseUtilTo: finalUtil,
   };
@@ -257,7 +268,20 @@ export function normalizeShipment(raw, resolvedFactoryName, globalEligibleMap) {
   const baseFrom = resolveInitialUtil(raw);
   const baseTo = resolveBaseUtilTo(raw, baseFrom);
 
-  const children = (raw.children || []).map(sku => {
+  const rawChildren = raw.children || [];
+  const normalRawChildren = [];
+  const outOfShipmentCbus = raw.availableCbus ? [...raw.availableCbus] : [];
+
+  rawChildren.forEach(sku => {
+    // If source_bucket is OUT_OF_SHIPMENT_NEW_CBU and not already confirmed/added, exclude from initial rendering
+    if (sku.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU" && !sku.isAdded && sku.tag !== "NEW") {
+      outOfShipmentCbus.push(sku);
+    } else {
+      normalRawChildren.push(sku);
+    }
+  });
+
+  const children = normalRawChildren.map(sku => {
     const rec = parseFloat(sku.recQty) || 0;
     const csW = resolveItemCaseWeight(sku);
     const ordCs = Number(sku.cs) || Number(sku.ord_qty) || 0;
@@ -287,6 +311,30 @@ export function normalizeShipment(raw, resolvedFactoryName, globalEligibleMap) {
     };
   });
 
+  // Deduplicate and normalize available out-of-shipment CBUs
+  const seenCbuKeys = new Set();
+  const normalizedAvailableCbus = [];
+  outOfShipmentCbus.forEach(sku => {
+    const key = (sku.Material || sku.material || sku.code || sku.id || "").toUpperCase().trim();
+    if (key && !seenCbuKeys.has(key)) {
+      seenCbuKeys.add(key);
+      const csW = resolveItemCaseWeight(sku);
+      const matRecord = lookupMaterialRecord(resolvedFactoryName, sku, globalEligibleMap);
+      const initialPool = resolveInitialPool(matRecord, sku.eligible);
+      const currentPool = matRecord ? matRecord.currentEligible : initialPool;
+      normalizedAvailableCbus.push({
+        ...sku,
+        Material: sku.Material || key,
+        MaterialDescription: sku.MaterialDescription || sku.materialDescription || sku.desc || key,
+        csWeight: csW,
+        eligible: currentPool,
+        recQty: sku.recQty != null ? parseFloat(sku.recQty) : 0,
+        msdnLossCases: sku.msdnLossCases ?? sku.mstn_loss_mitigation_cases ?? 0,
+        source_bucket: "OUT_OF_SHIPMENT_NEW_CBU",
+      });
+    }
+  });
+
   const normalized = {
     ...raw,
     weight: parseFloat(raw.weight || 0),
@@ -298,6 +346,7 @@ export function normalizeShipment(raw, resolvedFactoryName, globalEligibleMap) {
     utilFrom: baseFrom,
     utilTo: baseTo,
     children,
+    availableCbus: normalizedAvailableCbus,
   };
 
   return recalcShipment(normalized, children);
@@ -422,6 +471,211 @@ export function syncPlantShipmentsCache(prevCache, plantId, indId, skuIdx, isMat
   }
 
   return { newCache, updatedTargetInd };
+}
+
+export function submitShipmentCbuChanges({
+  prevCache,
+  plantId,
+  dcId,
+  indId,
+  selectedCbus = [],
+  resolvedFactoryName,
+  globalEligibleMap = {},
+}) {
+  let targetCacheKey = null;
+  let indIndex = -1;
+
+  // 1. Try direct cache key if both plantId and dcId provided
+  if (plantId && dcId) {
+    const directKey = `${plantId}_${dcId}`;
+    if (Array.isArray(prevCache[directKey])) {
+      const idx = prevCache[directKey].findIndex(
+        s => String(s.id) === String(indId) || String(s.shipmentId) === String(indId)
+      );
+      if (idx !== -1) {
+        targetCacheKey = directKey;
+        indIndex = idx;
+      }
+    }
+    if (indIndex === -1) {
+      const lowerKey = directKey.toLowerCase();
+      if (Array.isArray(prevCache[lowerKey])) {
+        const idx = prevCache[lowerKey].findIndex(
+          s => String(s.id) === String(indId) || String(s.shipmentId) === String(indId)
+        );
+        if (idx !== -1) {
+          targetCacheKey = lowerKey;
+          indIndex = idx;
+        }
+      }
+    }
+  }
+
+  // 2. Search across all cache keys in prevCache to find where this shipment lives
+  if (indIndex === -1) {
+    for (const [k, list] of Object.entries(prevCache || {})) {
+      if (!Array.isArray(list)) continue;
+      const idx = list.findIndex(
+        s => String(s.id) === String(indId) || String(s.shipmentId) === String(indId)
+      );
+      if (idx !== -1) {
+        targetCacheKey = k;
+        indIndex = idx;
+        break;
+      }
+    }
+  }
+
+  if (indIndex === -1 || !targetCacheKey) {
+    console.warn(`submitShipmentCbuChanges: could not find shipment ${indId} in cache`);
+    return null;
+  }
+
+  const currentInd = prevCache[targetCacheKey][indIndex];
+  const existingChildren = currentInd.children || [];
+  const effectivePlant = plantId || targetCacheKey.split("_")[0];
+  const effectiveFactory = resolvedFactoryName || effectivePlant;
+
+  // Track old quantities of previously added items in this shipment
+  const oldAddedQtyMap = {};
+  existingChildren.forEach(c => {
+    if (c.isAdded || c.tag === "NEW" || c.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU") {
+      const codeKey = (c.Material || c.id || c.code || "").toUpperCase().trim();
+      oldAddedQtyMap[codeKey] = parseFloat(c.recQty) || 0;
+    }
+  });
+
+  // Base children (original items not added through Add CBU)
+  const baseChildren = existingChildren.filter(
+    c => !c.isAdded && c.tag !== "NEW" && c.source_bucket !== "OUT_OF_SHIPMENT_NEW_CBU"
+  );
+
+  const inventoryDeltas = [];
+
+  // Process selected CBUs to be added or updated
+  const newAddedChildren = selectedCbus.map(cbu => {
+    const codeKey = (cbu.Material || cbu.cbu || cbu.id || cbu.code || "").toUpperCase().trim();
+    const descKey = (cbu.MaterialDescription || cbu.materialDescription || cbu.desc || "").toUpperCase().trim();
+    const isMatch = s => {
+      const keys = buildSkuMatchKeys(s);
+      return (codeKey && keys.sCode === codeKey) || (descKey && keys.sDesc === descKey);
+    };
+
+    const recVal = Math.max(0, parseFloat(cbu.recQty) || 0);
+    const oldRec = oldAddedQtyMap[codeKey] || 0;
+    const delta = recVal - oldRec;
+
+    const matRecord = lookupMaterialRecord(effectiveFactory, cbu, globalEligibleMap);
+    const initialPool = resolveInitialPool(matRecord, cbu.eligible);
+    const curPool = matRecord ? matRecord.currentEligible : initialPool;
+    const newRemainingEligible = Math.max(0, curPool - delta);
+
+    if (matRecord) {
+      matRecord.currentEligible = newRemainingEligible;
+    }
+
+    inventoryDeltas.push({
+      isMatch,
+      newRemainingEligible,
+      matRecord,
+      codeKey,
+    });
+
+    const csW = cbu.csWeight || resolveItemCaseWeight(cbu);
+    const totalT = (recVal * csW).toFixed(3);
+
+    return {
+      ...cbu,
+      Material: cbu.Material || codeKey,
+      MaterialDescription: cbu.MaterialDescription || descKey || codeKey,
+      tag: "NEW",
+      isAdded: true,
+      userAdded: true,
+      source_bucket: "OUT_OF_SHIPMENT_NEW_CBU",
+      recQty: recVal,
+      baseRecQty: 0,
+      cs: 0,
+      ord_qty: 0,
+      netweight: "0.000",
+      csWeight: csW,
+      status: "Accepted",
+      eligible: newRemainingEligible,
+      maxElig: recVal + newRemainingEligible,
+      total: `${recVal.toLocaleString()} / ${totalT}T`,
+      priority: cbu.priority || cbu.Shipment_Priority || "P2",
+      risk_flag: cbu.risk_flag || "p2",
+      msdnLossCases: cbu.msdnLossCases ?? cbu.mstn_loss_mitigation_cases ?? 85,
+    };
+  });
+
+  // Handle deselected previously added items (return inventory)
+  const selectedKeys = new Set(
+    selectedCbus.map(c => (c.Material || c.cbu || c.id || c.code || "").toUpperCase().trim())
+  );
+  Object.keys(oldAddedQtyMap).forEach(oldKey => {
+    if (!selectedKeys.has(oldKey)) {
+      const oldQty = oldAddedQtyMap[oldKey];
+      const isMatch = s => {
+        const keys = buildSkuMatchKeys(s);
+        return keys.sCode === oldKey;
+      };
+      const matRecord = lookupMaterialRecord(effectiveFactory, { Material: oldKey }, globalEligibleMap);
+      if (matRecord) {
+        const newRemainingEligible = matRecord.currentEligible + oldQty;
+        matRecord.currentEligible = newRemainingEligible;
+        inventoryDeltas.push({
+          isMatch,
+          newRemainingEligible,
+          matRecord,
+          codeKey: oldKey,
+        });
+      }
+    }
+  });
+
+  const updatedChildren = [...baseChildren, ...newAddedChildren];
+  const recalculatedInd = recalcShipment(currentInd, updatedChildren);
+  recalculatedInd.availableCbus = currentInd.availableCbus;
+
+  // Build new cache and synchronize eligible across other shipments in the same plant
+  const newCache = {};
+  const effectivePlantPrefix = String(effectivePlant || "").toLowerCase();
+
+  for (const [k, list] of Object.entries(prevCache || {})) {
+    const isTargetKey = k === targetCacheKey || k.toLowerCase() === targetCacheKey.toLowerCase();
+    const isSamePlant = effectivePlantPrefix && k.toLowerCase().startsWith(`${effectivePlantPrefix}_`);
+
+    if (!isTargetKey && !isSamePlant) {
+      newCache[k] = list;
+      continue;
+    }
+
+    newCache[k] = (list || []).map(shipment => {
+      if (String(shipment.id) === String(indId) || String(shipment.shipmentId) === String(indId)) {
+        return recalculatedInd;
+      }
+      let changed = false;
+      const syncedChildren = (shipment.children || []).map(sku => {
+        const matchedDelta = inventoryDeltas.find(d => d.isMatch(sku));
+        if (matchedDelta) {
+          changed = true;
+          return {
+            ...sku,
+            eligible: matchedDelta.newRemainingEligible,
+            maxElig: (parseFloat(sku.recQty) || 0) + matchedDelta.newRemainingEligible,
+          };
+        }
+        return sku;
+      });
+      return changed ? { ...shipment, children: syncedChildren } : shipment;
+    });
+  }
+
+  return {
+    newCache,
+    updatedTargetInd: recalculatedInd,
+    inventoryDeltas,
+  };
 }
 
 export function extractMaterialId(term) {
@@ -581,18 +835,38 @@ export function resolveUtilPercent(val, fallback) {
 }
 
 export function resolveTargetShipment(indOrId, summaryPayload, reviewInd, dcShipmentsCache) {
+  const sId = typeof indOrId === "string" ? indOrId : (indOrId?.id || indOrId?.shipmentId || summaryPayload?.shipmentId);
+  if (sId) {
+    for (const shipList of Object.values(dcShipmentsCache || {})) {
+      if (!Array.isArray(shipList)) continue;
+      const found = shipList.find(s => String(s.id) === String(sId) || String(s.shipmentId) === String(sId));
+      if (found) return found;
+    }
+  }
   if (indOrId && typeof indOrId === "object") return indOrId;
   if (summaryPayload?.ind) return summaryPayload.ind;
-  if (reviewInd && (reviewInd.id === indOrId || reviewInd.shipmentId === indOrId)) {
-    return reviewInd;
-  }
-  const allShipments = Object.values(dcShipmentsCache || {}).flat();
-  return allShipments.find(s => s?.id === indOrId || s?.shipmentId === indOrId) || null;
+  if (reviewInd) return reviewInd;
+  return null;
 }
 
 export function isSkuAddedOrEdited(sku) {
   if (!sku) return false;
-  if (sku.isEdited || sku.userEdited || sku.isAdded || sku.userAdded || sku.added || sku.edited) {
+  if (
+    sku.isEdited ||
+    sku.userEdited ||
+    sku.isAdded ||
+    sku.userAdded ||
+    sku.added ||
+    sku.edited ||
+    sku.tag === "NEW" ||
+    sku.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU" ||
+    sku.sku?.isEdited ||
+    sku.sku?.userEdited ||
+    sku.sku?.isAdded ||
+    sku.sku?.userAdded ||
+    sku.sku?.tag === "NEW" ||
+    sku.sku?.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU"
+  ) {
     return true;
   }
   if (sku.baseRecQty != null) {
@@ -615,25 +889,46 @@ export function isSkuAddedOrEdited(sku) {
 
 export function buildDispatchMaterialItem(sku, idx) {
   const cbuId =
-    sku.Material ||
     sku.material ||
+    sku.Material ||
     sku.materialId ||
     sku.cbuId ||
     sku.id ||
+    sku.sku?.Material ||
+    sku.sku?.id ||
     sku.cbu ||
     `MAT-${idx + 1}`;
 
-  const recCases = parseFloat(sku.recQty ?? sku.recommended_cases ?? sku.recommendedQuantity) || 0;
+  const description =
+    sku.description ||
+    sku.material_description ||
+    sku.MaterialDescription ||
+    sku.materialDescription ||
+    sku.cbu ||
+    sku.sku?.MaterialDescription ||
+    sku.sku?.desc ||
+    sku.name ||
+    cbuId;
+
+  const recCases = parseFloat(
+    sku.recQty ??
+    sku.recommended_cases ??
+    sku.recommendedQuantity ??
+    sku.sku?.recQty
+  ) || 0;
+
   const eligCases = parseFloat(
     sku.eligible ??
     sku.eligible_stock_cases ??
     sku.eligibleQuantity ??
-    sku.newEligibility
+    sku.newEligibility ??
+    sku.new_eligible_quantity ??
+    sku.sku?.eligible
   ) || 0;
 
-  const csWeight = resolveItemCaseWeight(sku);
-  const ordCs = Number(sku.cs) || Number(sku.ord_qty) || Number(sku.origQty) || 0;
-  const netWeight = parseFloat(sku.netweight || sku.netWeight || (ordCs * csWeight)) || 0;
+  const csWeight = resolveItemCaseWeight(sku.sku || sku);
+  const ordCs = Number(sku.cs) || Number(sku.ord_qty) || Number(sku.origQty) || Number(sku.sku?.cs) || 0;
+  const netWeight = parseFloat(sku.netweight || sku.netWeight || sku.sku?.netweight || (ordCs * csWeight)) || 0;
   const addedWeight = recCases * csWeight;
   const totalCs = ordCs + recCases;
 
@@ -643,6 +938,17 @@ export function buildDispatchMaterialItem(sku, idx) {
       ? parseFloat(sku.recWeight)
       : (recCases === 0 ? 0 : parseFloat(addedWeight.toFixed(3))));
 
+  const isNew = Boolean(
+    sku.isAdded ||
+    sku.userAdded ||
+    sku.tag === "NEW" ||
+    sku.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU" ||
+    sku.sku?.isAdded ||
+    sku.sku?.userAdded ||
+    sku.sku?.tag === "NEW" ||
+    sku.sku?.source_bucket === "OUT_OF_SHIPMENT_NEW_CBU"
+  );
+
   const item = {
     material: cbuId,
     recommended_cases: recCases,
@@ -650,17 +956,48 @@ export function buildDispatchMaterialItem(sku, idx) {
     eligible_stock_cases: eligCases,
   };
 
+  if (isNew) {
+    item.material_id = cbuId;
+    item.cbu = cbuId;
+    item.cbu_id = cbuId;
+    item.description = description;
+    item.material_description = description;
+    item.recommended_quantity = recCases;
+    item.eligible_quantity = eligCases;
+    item.new_eligible_quantity = eligCases;
+    item.new_eligibility = eligCases;
+    item.is_new_cbu = true;
+    item.tag = "NEW";
+  }
+
   // Non-enumerable properties for backward-compatibility with tests/helpers
-  Object.defineProperties(item, {
+  const nonEnumerableProps = {
     materialId: { get: () => cbuId, enumerable: false },
-    cbuId: { get: () => cbuId, enumerable: false },
-    recommendedQuantity: { get: () => recCases, enumerable: false },
-    newEligibility: { get: () => eligCases, enumerable: false },
-    eligibleQuantity: { get: () => eligCases, enumerable: false },
     totalCases: { get: () => totalCs, enumerable: false },
     newTotalWeight: { get: () => parseFloat((netWeight + addedWeight).toFixed(3)), enumerable: false },
     status: { get: () => "Accepted", enumerable: false },
-  });
+  };
+
+  if (!isNew) {
+    const hiddenDefaults = {
+      material_id: cbuId,
+      cbu: cbuId,
+      cbu_id: cbuId,
+      description,
+      material_description: description,
+      recommended_quantity: recCases,
+      eligible_quantity: eligCases,
+      new_eligible_quantity: eligCases,
+      new_eligibility: eligCases,
+      is_new_cbu: false,
+      tag: sku.isAi ? "AI" : "ORIGINAL",
+    };
+    Object.entries(hiddenDefaults).forEach(([key, val]) => {
+      nonEnumerableProps[key] = { get: () => val, enumerable: false };
+    });
+  }
+
+  Object.defineProperties(item, nonEnumerableProps);
 
   return {
     item,
@@ -680,14 +1017,15 @@ export function buildDispatchPayload({
   finalUtilNum,
 }) {
   const rawSkus =
-    targetInd?.children ||
-    (Array.isArray(customManifest) && customManifest.length > 0 ? customManifest : []);
+    (Array.isArray(customManifest) && customManifest.length > 0)
+      ? customManifest
+      : (targetInd?.children || []);
 
   // Filter to materials that the user has added or edited
   const candidateSkus = (rawSkus || []).filter(isSkuAddedOrEdited);
   const skusToInclude = candidateSkus.length > 0
     ? candidateSkus
-    : (rawSkus || []).filter(s => s.isEdited || s.userEdited || (s.baseRecQty == null && (parseFloat(s.recQty) || 0) > 0));
+    : (rawSkus || []).filter(s => s.isEdited || s.userEdited || s.isAdded || s.tag === "NEW" || (s.baseRecQty == null && (parseFloat(s.recQty) || 0) > 0));
 
   const materialList = skusToInclude.map((sku, idx) => {
     const { item } = buildDispatchMaterialItem(sku, idx);

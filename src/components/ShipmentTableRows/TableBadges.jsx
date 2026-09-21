@@ -60,6 +60,10 @@ export function FillBadge() {
   return <span className={styles.badgeFill}>FILL</span>;
 }
 
+export function NewBadge() {
+  return <span className={styles.badgeNew}>NEW</span>;
+}
+
 export function StatusBadge({ status }) {
   const map = {
     ACCEPTED: { bg: "#eef7f0", color: "#2e9e5b" },

@@ -8,6 +8,8 @@ import {
   getMaterialSearchOptions,
   extractMaterialId,
   shipmentMatchesTerm,
+  submitShipmentCbuChanges,
+  buildDispatchMaterialItem,
 } from '../appContextHelpers';
 
 describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
@@ -97,6 +99,42 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
       const result = recalcShipment(baseShipment, updatedChildren);
       expect(result.final_utilization).toBeCloseTo(72.0, 1);
       expect(result.utilTo).toBeCloseTo(72.0, 1);
+    });
+
+    it('keeps truck capacity (weight/truckCap) fixed at 18T/14T and only increases final utilization', () => {
+      const shipment18T = {
+        id: 'SHP-18',
+        weight: 18,
+        truckCap: 18.0,
+        initial_utilization: 88.0,
+        utilFrom: 88.0,
+        utilTo: 88.0,
+        final_utilization: 88.0,
+        children: [
+          {
+            Material: 'MAT-1',
+            cs: 100,
+            netweight: 2.0,
+            recQty: 0,
+            csWeight: 0.004,
+          },
+        ],
+      };
+
+      const updatedChildren = [
+        {
+          ...shipment18T.children[0],
+          recQty: 150, // 150 * 0.004 = 0.6T
+        },
+      ];
+
+      const result = recalcShipment(shipment18T, updatedChildren);
+
+      // Final utilization increases from 88.0% + (0.6 / 18.0 * 100)% = 88.0 + 3.33 = 91.3%
+      expect(result.final_utilization).toBeCloseTo(91.3, 1);
+      // Truck capacity remains strictly fixed at 18
+      expect(result.weight).toBe(18.0);
+      expect(result.truckCap).toBe(18.0);
     });
   });
 
@@ -394,6 +432,178 @@ describe('appContextHelpers - Shipment Recalculation & Utilization', () => {
       expect(shipmentMatchesTerm(ind, 'TRIPTI')).toBe(true);
       expect(shipmentMatchesTerm(ind, 'NON_EXISTENT')).toBe(false);
       expect(shipmentMatchesTerm(ind, '')).toBe(true);
+    });
+  });
+
+  describe('Add New CBU Helpers', () => {
+    it('filters out source_bucket === "OUT_OF_SHIPMENT_NEW_CBU" at initial rendering and stores in availableCbus', () => {
+      const raw = {
+        id: 'SHP-100',
+        capacity: 14.0,
+        initial_utilization: 70.0,
+        children: [
+          {
+            Material: 'NORM-1',
+            MaterialDescription: 'Normal material',
+            cs: 100,
+            recQty: 0,
+            eligible: 200,
+          },
+          {
+            Material: 'NEW-CBU-1',
+            MaterialDescription: 'Out of shipment CBU',
+            source_bucket: 'OUT_OF_SHIPMENT_NEW_CBU',
+            eligible: 500,
+            msdnLossCases: 85,
+          },
+        ],
+      };
+
+      const normalized = normalizeShipment(raw, 'Delhi Plant', {});
+      // Normal children only has NORM-1
+      expect(normalized.children.length).toBe(1);
+      expect(normalized.children[0].Material).toBe('NORM-1');
+
+      // availableCbus contains NEW-CBU-1
+      expect(normalized.availableCbus).toBeDefined();
+      expect(normalized.availableCbus.length).toBe(1);
+      expect(normalized.availableCbus[0].Material).toBe('NEW-CBU-1');
+    });
+
+    it('submitShipmentCbuChanges adds CBU with tag NEW, recalculates util, and deducts from global eligible', () => {
+      const globalEligibleMap = {
+        'Delhi Plant': {
+          'NEW-CBU-1': {
+            factoryName: 'Delhi Plant',
+            code: 'NEW-CBU-1',
+            initialEligible: 500,
+            currentEligible: 500,
+          },
+        },
+      };
+
+      const ind = {
+        id: 'SHP-100',
+        truckCap: 14.0,
+        weight: 10.0,
+        baseGrossWeight: 10.0,
+        initial_utilization: 70.0,
+        utilFrom: 70.0,
+        children: [
+          {
+            Material: 'NORM-1',
+            MaterialDescription: 'Normal material',
+            cs: 100,
+            recQty: 0,
+            eligible: 200,
+            csWeight: 0.005,
+          },
+        ],
+        availableCbus: [
+          {
+            Material: 'NEW-CBU-1',
+            MaterialDescription: 'Out of shipment CBU',
+            source_bucket: 'OUT_OF_SHIPMENT_NEW_CBU',
+            eligible: 500,
+            csWeight: 0.005,
+          },
+        ],
+      };
+
+      const prevCache = {
+        'delhi_delhi-dc': [ind],
+      };
+
+      const selectedCbus = [
+        {
+          Material: 'NEW-CBU-1',
+          MaterialDescription: 'Out of shipment CBU',
+          recQty: 20,
+          csWeight: 0.005,
+          eligible: 500,
+        },
+      ];
+
+      const result = submitShipmentCbuChanges({
+        prevCache,
+        plantId: 'delhi',
+        dcId: 'delhi-dc',
+        indId: 'SHP-100',
+        selectedCbus,
+        resolvedFactoryName: 'Delhi Plant',
+        globalEligibleMap,
+      });
+
+      expect(result).not.toBeNull();
+      const updatedInd = result.updatedTargetInd;
+      expect(updatedInd.children.length).toBe(2);
+
+      const addedChild = updatedInd.children.find(c => c.Material === 'NEW-CBU-1');
+      expect(addedChild).toBeDefined();
+      expect(addedChild.tag).toBe('NEW');
+      expect(addedChild.isAdded).toBe(true);
+      expect(addedChild.recQty).toBe(20);
+
+      // Global eligible deducted by 20 (500 -> 480)
+      expect(globalEligibleMap['Delhi Plant']['NEW-CBU-1'].currentEligible).toBe(480);
+
+      // Final utilization recalculated (20 * 0.005 = 0.1T; 0.1/14.0 * 100 = ~0.71% gain)
+      expect(updatedInd.utilTo).toBeGreaterThan(70.0);
+      expect(updatedInd.weight).toBe(14.0);
+      expect(updatedInd.truckCap).toBe(14.0);
+    });
+
+    it('buildDispatchMaterialItem and buildDispatchPayload include all requested fields for newly added CBUs', () => {
+      const addedSku = {
+        Material: 'NEW-CBU-1',
+        MaterialDescription: 'Out of shipment CBU Description',
+        recQty: 25,
+        eligible: 475,
+        csWeight: 0.008,
+        tag: 'NEW',
+        isAdded: true,
+      };
+
+      const { item } = buildDispatchMaterialItem(addedSku, 0);
+
+      expect(item.material).toBe('NEW-CBU-1');
+      expect(item.cbu_id).toBe('NEW-CBU-1');
+      expect(item.cbu).toBe('NEW-CBU-1');
+      expect(item.description).toBe('Out of shipment CBU Description');
+      expect(item.material_description).toBe('Out of shipment CBU Description');
+      expect(item.recommended_quantity).toBe(25);
+      expect(item.recommended_cases).toBe(25);
+      expect(item.eligible_quantity).toBe(475);
+      expect(item.new_eligible_quantity).toBe(475);
+      expect(item.eligible_stock_cases).toBe(475);
+      expect(item.is_new_cbu).toBe(true);
+      expect(item.tag).toBe('NEW');
+
+      const ind = {
+        id: 'SHP-999',
+        truckCap: 18.0,
+        children: [addedSku],
+      };
+
+      const payload = buildDispatchPayload({
+        targetInd: ind,
+        shipmentId: 'SHP-999',
+        sendingPlant: 'Haridwar',
+        receivingPlant: 'Delhi',
+        selectedDate: '2026-09-21',
+        finalUtilNum: 88.5,
+      });
+
+      expect(payload.materials).toHaveLength(1);
+      const dispatchedItem = payload.materials[0];
+      expect(dispatchedItem.material).toBe('NEW-CBU-1');
+      expect(dispatchedItem.cbu_id).toBe('NEW-CBU-1');
+      expect(dispatchedItem.description).toBe('Out of shipment CBU Description');
+      expect(dispatchedItem.recommended_quantity).toBe(25);
+      expect(dispatchedItem.eligible_quantity).toBe(475);
+      expect(dispatchedItem.new_eligible_quantity).toBe(475);
+      expect(dispatchedItem.is_new_cbu).toBe(true);
+      expect(dispatchedItem.tag).toBe('NEW');
     });
   });
 });

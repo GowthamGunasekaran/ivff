@@ -97,12 +97,15 @@ describe('IndRow Component', () => {
 
   it('renders expanded child SKU rows when open is true and handles onRecChange', () => {
     const handleRecChange = jest.fn();
+    const handleAddCbu = jest.fn();
     renderWithTable(
       <IndRow
         ind={mockInd}
         open={true}
         onToggle={jest.fn()}
         onRecChange={handleRecChange}
+        onAddCbu={handleAddCbu}
+        dcLabel="Delhi DC"
       />
     );
 
@@ -112,6 +115,9 @@ describe('IndRow Component', () => {
 
     fireEvent.click(screen.getByText('Change Sku'));
     expect(handleRecChange).toHaveBeenCalledWith('SHP-12345', 0, 50);
+
+    fireEvent.click(screen.getByText('Add CBU'));
+    expect(handleAddCbu).toHaveBeenCalledWith(mockInd, 'Delhi DC');
   });
 
   it('renders over-utilization indicator when finalUtil > 100', () => {
