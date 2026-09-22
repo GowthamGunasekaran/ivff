@@ -5,6 +5,7 @@
  */
 
 import { memo, useMemo } from "react";
+import PropTypes from "prop-types";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -105,33 +106,53 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   const weightDisplay = resolveWeightDisplay(ind, totalNetWeight);
 
   const totalOrderLoss = skus.reduce((sum, r) => {
-    let val = 0;
     if (r.order_loss_cases != null) {
-      val = Number(r.order_loss_cases) || 0;
-    } else if (r.orderLossCases != null) {
-      val = Number(r.orderLossCases) || 0;
-    } else if (r.priority === "P1" || r.risk_flag === "p1" || r.Shipment_Priority === "High") {
-      val = 142;
+      return sum + (Number(r.order_loss_cases) || 0);
     }
-    return sum + val;
+    if (r.orderLossCases != null) {
+      return sum + (Number(r.orderLossCases) || 0);
+    }
+    if (r.priority === "P1" || r.risk_flag === "p1" || r.Shipment_Priority === "High") {
+      return sum + 142;
+    }
+    return sum;
   }, 0);
 
   const totalMsdnLoss = skus.reduce((sum, r) => {
-    let val = 0;
     if (r.mstn_loss_mitigation_cases != null) {
-      val = Number(r.mstn_loss_mitigation_cases) || 0;
-    } else if (r.msdnLossCases != null) {
-      val = Number(r.msdnLossCases) || 0;
-    } else if (r.priority === "P2" || r.risk_flag === "p2" || r.Shipment_Priority === "Medium") {
-      val = 85;
+      return sum + (Number(r.mstn_loss_mitigation_cases) || 0);
     }
-    return sum + val;
+    if (r.msdnLossCases != null) {
+      return sum + (Number(r.msdnLossCases) || 0);
+    }
+    if (r.priority === "P2" || r.risk_flag === "p2" || r.Shipment_Priority === "Medium") {
+      return sum + 85;
+    }
+    return sum;
   }, 0);
 
   return (
-    <TableRow className={`${styles.indRow} ${isOverUtilized ? styles.indRowOverUtilized : ""}`} onClick={onToggle}>
+    <TableRow
+      className={`${styles.indRow} ${isOverUtilized ? styles.indRowOverUtilized : ""}`}
+      tabIndex={0}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle?.();
+        }
+      }}
+    >
       <TableCell className={`${styles.indCell} ${styles.indCellExpand}`} sx={{ width: COL.expand }}>
-        <IconButton size="small" sx={{ p: 0 }}>
+        <IconButton
+          size="small"
+          sx={{ p: 0 }}
+          aria-label={open ? `Collapse shipment ${ind.shipmentId || ind.id}` : `Expand shipment ${ind.shipmentId || ind.id}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle?.();
+          }}
+        >
           {open ? <KeyboardArrowDownIcon className={styles.indIconExpand} /> : <KeyboardArrowRightIcon className={styles.indIconExpand} />}
         </IconButton>
       </TableCell>
@@ -148,9 +169,15 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
           </span>
           {isOverUtilized && (
             <Tooltip title={tooltipMessage} arrow placement="top">
-              <span className={styles.indInfoIconWrapper} onClick={e => e.stopPropagation()}>
+              <button
+                type="button"
+                aria-label="Utilization info"
+                className={styles.indInfoIconWrapper}
+                onClick={e => e.stopPropagation()}
+                style={{ background: "transparent", border: "none", padding: 0, cursor: "pointer", display: "inline-flex" }}
+              >
                 <InfoOutlinedIcon className={styles.indInfoIcon} />
-              </span>
+              </button>
             </Tooltip>
           )}
         </div>
@@ -220,11 +247,33 @@ export const IndRowMain = memo(function IndRowMain({ ind, open, onToggle, onRevi
   );
 });
 
+IndRowMain.propTypes = {
+  ind: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    shipmentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    priority: PropTypes.string,
+    status: PropTypes.string,
+    sendingPlantCode: PropTypes.string,
+    sourcePlant: PropTypes.string,
+    truckCap: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    capacity: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilFrom: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilTo: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    children: PropTypes.array,
+  }).isRequired,
+  open: PropTypes.bool,
+  onToggle: PropTypes.func,
+  onReview: PropTypes.func,
+  searchTerm: PropTypes.string,
+  dcLabel: PropTypes.string,
+};
+
 export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, searchTerm, onReview, onAddCbu, dcLabel }) {
-  const skus = ind.children || [];
+  const skus = useMemo(() => ind?.children || [], [ind?.children]);
 
   const displayedSkus = useMemo(() => {
-    if (!searchTerm || !searchTerm.trim()) {
+    if (!searchTerm?.trim()) {
       return skus.map((sku, originalIndex) => ({ sku, originalIndex }));
     }
     const cleanTerm = searchTerm.trim().toLowerCase();
@@ -261,7 +310,7 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
                       key={skuId + originalIndex}
                       sku={sku}
                       highlight={Boolean(searchTerm)}
-                      onRecChange={val => onRecChange && onRecChange(ind.id, originalIndex, val)}
+                      onRecChange={val => onRecChange?.(ind.id, originalIndex, val)}
                     />
                   );
                 })}
@@ -270,7 +319,7 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
                     <TableCell colSpan={12} className={styles.skuCellAdd}>
                       <button
                         className={styles.skuBtnAdd}
-                        onClick={() => onAddCbu && onAddCbu(ind, dcLabel)}
+                        onClick={() => onAddCbu?.(ind, dcLabel)}
                       >
                         <AddIcon className={styles.skuIconAdd} /> Add CBU
                       </button>
@@ -285,5 +334,20 @@ export const IndRow = memo(function IndRow({ ind, open, onToggle, onRecChange, s
     </>
   );
 });
+
+IndRow.propTypes = {
+  ind: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    shipmentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    children: PropTypes.array,
+  }).isRequired,
+  open: PropTypes.bool,
+  onToggle: PropTypes.func,
+  onRecChange: PropTypes.func,
+  searchTerm: PropTypes.string,
+  onReview: PropTypes.func,
+  onAddCbu: PropTypes.func,
+  dcLabel: PropTypes.string,
+};
 
 export default IndRow;

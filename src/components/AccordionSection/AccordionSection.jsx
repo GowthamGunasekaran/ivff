@@ -5,6 +5,7 @@
  */
 
 import { useState } from "react";
+import PropTypes from "prop-types";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import Collapse from "@mui/material/Collapse";
 import styles from "./AccordionSection.module.css";
@@ -15,8 +16,10 @@ export default function AccordionSection({ title, badge, children, defaultOpen =
   return (
     <div className={styles.wrapper}>
       <button
+        type="button"
         onClick={() => setOpen(v => !v)}
         className={styles.toggleBtn}
+        aria-expanded={open}
       >
         <ExpandMoreIcon
           sx={{
@@ -40,3 +43,11 @@ export default function AccordionSection({ title, badge, children, defaultOpen =
     </div>
   );
 }
+
+AccordionSection.propTypes = {
+  title: PropTypes.node,
+  badge: PropTypes.node,
+  children: PropTypes.node,
+  defaultOpen: PropTypes.bool,
+  titleExtra: PropTypes.node,
+};

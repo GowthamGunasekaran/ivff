@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo } from "react";
+import PropTypes from "prop-types";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -237,3 +238,18 @@ export default function ReviewDialog({ open, onClose, ind, dcLabel }) {
     </Dialog>
   );
 }
+
+ReviewDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  ind: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    children: PropTypes.array,
+    truckCap: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    capacity: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilFrom: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilTo: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }),
+  dcLabel: PropTypes.string,
+};

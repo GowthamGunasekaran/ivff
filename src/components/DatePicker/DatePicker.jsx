@@ -5,6 +5,7 @@
  */
 
 import { useState, useMemo } from "react";
+import PropTypes from "prop-types";
 import Popover from "@mui/material/Popover";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -142,8 +143,16 @@ export default function DatePicker({
   return (
     <>
       <div
+        role="button"
+        tabIndex={0}
         className={`${styles.dateTrigger} ${open ? styles.dateTriggerActive : ""}`}
         onClick={handleClickTrigger}
+        onKeyDown={e => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClickTrigger(e);
+          }
+        }}
         title="Click to select Date"
       >
         <span className={styles.floatingLabel}>Date</span>
@@ -221,8 +230,16 @@ export default function DatePicker({
               return (
                 <div
                   key={item.key}
+                  role="button"
+                  tabIndex={isDisabled ? -1 : 0}
                   className={`${styles.dayCell} ${isDisabled ? styles.dayCellDisabled : ""}`}
                   onClick={() => !isDisabled && handleDateSelect(dateStr)}
+                  onKeyDown={e => {
+                    if (!isDisabled && (e.key === "Enter" || e.key === " ")) {
+                      e.preventDefault();
+                      handleDateSelect(dateStr);
+                    }
+                  }}
                 >
                   <div
                     className={`${styles.dayCircle} ${
@@ -258,3 +275,11 @@ export default function DatePicker({
     </>
   );
 }
+
+DatePicker.propTypes = {
+  date: PropTypes.string,
+  defaultDate: PropTypes.string,
+  minDate: PropTypes.string,
+  maxDate: PropTypes.string,
+  onChange: PropTypes.func,
+};

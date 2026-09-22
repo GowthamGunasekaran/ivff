@@ -15,7 +15,7 @@ export default function LeftRail() {
       </div>
 
       {/* Calendar icon */}
-      <button className={styles.navBtn}>
+      <button type="button" className={styles.navBtn} aria-label="Schedule calendar">
         <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
           <path d={svgPaths.p1da67b80} stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
           <path d="M13.3333 1.66667V5" stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
@@ -27,7 +27,7 @@ export default function LeftRail() {
       </button>
 
       {/* Bar chart icon */}
-      <button className={styles.navBtn}>
+      <button type="button" className={styles.navBtn} aria-label="Analytics bar chart">
         <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
           <path d="M15 16.6667V8.33333" stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
           <path d="M10 16.6667V3.33333" stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
@@ -36,7 +36,7 @@ export default function LeftRail() {
       </button>
 
       {/* Layers icon */}
-      <button className={styles.navBtn}>
+      <button type="button" className={styles.navBtn} aria-label="Inventory layers">
         <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
           <path d={svgPaths.p81e2440} stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
           <path d={svgPaths.pab98830} stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
@@ -45,7 +45,7 @@ export default function LeftRail() {
       </button>
 
       {/* Trending icon */}
-      <button className={styles.navBtn}>
+      <button type="button" className={styles.navBtn} aria-label="Trends">
         <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
           <path d={svgPaths.p3c797180} stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
           <path d={svgPaths.p3ac0b600} stroke="#8C9BAD" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.25" />
@@ -53,7 +53,7 @@ export default function LeftRail() {
       </button>
 
       {/* Active – load optimizer (blue bg) */}
-      <button className={`${styles.navBtn} ${styles.navBtnActive}`}>
+      <button type="button" className={`${styles.navBtn} ${styles.navBtnActive}`} aria-label="Load Optimizer active view">
         <svg fill="none" height="20" viewBox="0 0 20 20" width="20">
           <path d={svgPaths.p33ed6f00} stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.67" />
           <path d="M12.5 15H7.5" stroke="white" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.67" />

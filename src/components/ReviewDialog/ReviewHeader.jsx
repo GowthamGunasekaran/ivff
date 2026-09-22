@@ -4,6 +4,7 @@
  * shipment details, and a close button.
  */
 
+import PropTypes from "prop-types";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
 import styles from "./ReviewDialog.module.css";
@@ -56,3 +57,21 @@ export default function ReviewHeader({ ind, dcLabel, onClose, metrics }) {
     </div>
   );
 }
+
+ReviewHeader.propTypes = {
+  ind: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilFrom: PropTypes.string,
+    utilTo: PropTypes.string,
+    truckCap: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    capacity: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }).isRequired,
+  dcLabel: PropTypes.string,
+  onClose: PropTypes.func.isRequired,
+  metrics: PropTypes.shape({
+    finalUtil: PropTypes.number,
+    capacityT: PropTypes.number,
+    addedWeightT: PropTypes.number,
+  }),
+};

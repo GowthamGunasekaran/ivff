@@ -4,6 +4,7 @@
  * Shows truck capacity, freshness risk, payload and other shipment validations.
  */
 
+import PropTypes from "prop-types";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import styles from "./ReviewDialog.module.css";
@@ -63,3 +64,18 @@ export default function ReviewValidation({ ind, metrics, totalCases }) {
     </div>
   );
 }
+
+ReviewValidation.propTypes = {
+  ind: PropTypes.shape({
+    truckCap: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    capacity: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    weight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilFrom: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    utilTo: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }).isRequired,
+  metrics: PropTypes.shape({
+    finalUtil: PropTypes.number,
+    finalWeightT: PropTypes.number,
+  }),
+  totalCases: PropTypes.number,
+};

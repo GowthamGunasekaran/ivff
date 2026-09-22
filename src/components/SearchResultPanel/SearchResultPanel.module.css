@@ -69,7 +69,9 @@
 .gridHeader {
   font-weight: 700;
   font-size: 10px;
-  color: #8a90a0;
+
+
+  color: #5a6072;
   padding: 8px 14px;
   background: #f7f9fc;
   border-bottom: 1px solid #eceef3;
@@ -152,7 +154,7 @@
 .noResults {
   padding: 16px;
   text-align: center;
-  color: #8a90a0;
+  color: #5a6072;
   font-size: 12px;
   background: white;
   border-radius: 8px;

@@ -5,6 +5,7 @@
  */
 
 import { useRef, useEffect } from "react";
+import PropTypes from "prop-types";
 import * as echarts from "echarts";
 import ReactECharts from "echarts-for-react";
 import styles from "./EChartWrapper.module.css";
@@ -45,3 +46,9 @@ export default function EChartWrapper({ title, option, height = 140 }) {
     </div>
   );
 }
+
+EChartWrapper.propTypes = {
+  title: PropTypes.node,
+  option: PropTypes.object,
+  height: PropTypes.oneOfType([PropTypes.number, PropTypes.string]),
+};

@@ -217,12 +217,12 @@
 
 .indUtilUnder {
     font-weight: 700;
-    color: #ef4b5c;
+    color: #c53030;
 }
 
 .indUtilOver {
     font-weight: 700;
-    color: #ef4b5c;
+    color: #b91c1c;
     background: #ffe8ea;
     padding: 1px 4px;
     border-radius: 4px;
@@ -316,9 +316,9 @@
 
 .indBtnReviewDisabled {
     background: #d9dce1 !important;
-    color: #8a90a0 !important;
+    color: #4a5568 !important;
     cursor: not-allowed !important;
-    opacity: 0.65;
+    opacity: 0.85;
     box-shadow: none !important;
 }
 
@@ -400,12 +400,12 @@
 
 .plantLocation {
     font-size: 9px;
-    color: rgba(255, 255, 255, 0.4);
+    color: rgba(255, 255, 255, 0.85);
 }
 
 .plantBadgeNeutral {
-    background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.65);
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
     font-weight: 700;
     font-size: 8px;
     padding: 1px 6px;
@@ -413,8 +413,8 @@
 }
 
 .plantBadgeWarning {
-    background: rgba(245, 158, 11, 0.16);
-    color: #fcd34d;
+    background: rgba(245, 158, 11, 0.25);
+    color: #fef08a;
     font-weight: 700;
     font-size: 8px;
     padding: 1px 6px;

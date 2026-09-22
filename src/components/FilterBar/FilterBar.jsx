@@ -172,8 +172,8 @@ export default function FilterBar() {
             onOpen={() => handleDropdownOpen(f.label)}
             onClose={() => handleDropdownClose(f.label)}
             onChange={(_, newValue) => handleDropdownChange(f.label, newValue)}
-            renderOption={(props, option, { selected }) => {
-              const { key, ...optionProps } = props;
+            renderOption={(renderProps, option, { selected }) => {
+              const { key, ...optionProps } = renderProps;
               return (
                 <li
                   key={key}

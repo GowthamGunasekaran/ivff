@@ -50,7 +50,7 @@
 .clearIconBtn {
   background: none;
   border: none;
-  color: #8a90a0;
+  color: #5a6072;
   cursor: pointer;
   padding: 2px;
   border-radius: 50%;
@@ -62,7 +62,7 @@
 }
 
 .clearIconBtn:hover {
-  color: #ef4b5c;
+  color: #c53030;
   background-color: #fef2f2;
 }
 

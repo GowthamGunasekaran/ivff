@@ -45,9 +45,9 @@ export default [
       ...react.configs.recommended.rules,
       ...react.configs["jsx-runtime"].rules,
       ...reactHooks.configs.recommended.rules,
-      ...sonarjs.configs.recommended.rules,
-      "react/prop-types": "off",
+      "react/prop-types": "error",
       "react/no-unescaped-entities": "off",
+      "react-hooks/set-state-in-effect": "warn",
       "no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     },
   },
@@ -57,6 +57,9 @@ export default [
       globals: {
         ...globals.jest,
       },
+    },
+    rules: {
+      "react/prop-types": "off",
     },
   },
 ];

@@ -25,10 +25,10 @@ export function resolveFactoryName(plantIdOrName, plantsList = [], factoriesList
 
   const plantObj = (plantsList || []).find(
     p =>
-      (p.id && p.id.toLowerCase() === query) ||
-      (p.name && p.name.toLowerCase().trim() === query) ||
-      (p.id && cleanEntityKey(p.id) === queryBase) ||
-      (p.name && cleanEntityKey(p.name) === queryBase)
+      p?.id?.toLowerCase() === query ||
+      p?.name?.toLowerCase().trim() === query ||
+      (p?.id && cleanEntityKey(p.id) === queryBase) ||
+      (p?.name && cleanEntityKey(p.name) === queryBase)
   );
   const candidateName = (plantObj ? plantObj.name : plantIdOrName).toLowerCase().trim();
   const candidateBase = cleanEntityKey(candidateName);
@@ -113,7 +113,8 @@ export function buildGlobalEligible(factoriesList) {
       const nameKey = (m.name || m.location || "").toUpperCase().trim();
       const elig = typeof m.eligible === "number" ? m.eligible : parseFloat(String(m.eligible).replace(/,/g, "")) || 0;
       const stock = resolveStockValue(m);
-      const initialPool = (m.eligible != null && !isNaN(elig)) ? elig : (stock > 0 ? stock : 0);
+      const fallbackStock = Math.max(0, stock);
+      const initialPool = (m.eligible != null && !isNaN(elig)) ? elig : fallbackStock;
 
       const record = {
         factoryName: fName,
@@ -932,11 +933,14 @@ export function buildDispatchMaterialItem(sku, idx) {
   const addedWeight = recCases * csWeight;
   const totalCs = ordCs + recCases;
 
-  const recCasesWT = sku.recommended_cases_WT != null
-    ? parseFloat(sku.recommended_cases_WT)
-    : (sku.recWeight != null
-      ? parseFloat(sku.recWeight)
-      : (recCases === 0 ? 0 : parseFloat(addedWeight.toFixed(3))));
+  let recCasesWT = 0;
+  if (sku.recommended_cases_WT != null) {
+    recCasesWT = parseFloat(sku.recommended_cases_WT);
+  } else if (sku.recWeight != null) {
+    recCasesWT = parseFloat(sku.recWeight);
+  } else if (recCases !== 0) {
+    recCasesWT = parseFloat(addedWeight.toFixed(3));
+  }
 
   const isNew = Boolean(
     sku.isAdded ||

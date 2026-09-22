@@ -24,21 +24,6 @@ import { getMaterialSearchOptions } from "../../utils/appContextHelpers";
 import { HEADERS, COL } from "../../utils/constants";
 import styles from "./ShipmentPlanningWorkspace.module.css";
 
-const DEFAULT_CBUS = [
-  "DACM1R4",
-  "DDCC1R2",
-  "DTBD1R1",
-  "DXOC1R9",
-  "UPDA100",
-  "VIM-500-24",
-  "LIF-125-72",
-  "CLO-150-48",
-  "PON-50-144",
-  "DOV-100-48",
-  "SRF-500-24",
-  "RIN-250-48",
-];
-
 export default function ShipmentPlanningWorkspace() {
   const {
     plantsData: plants,
@@ -140,8 +125,8 @@ export default function ShipmentPlanningWorkspace() {
                 setShipmentSearch(newValue || "");
               }
             }}
-            renderOption={(props, option) => {
-              const { key, ...optionProps } = props;
+            renderOption={(renderProps, option) => {
+              const { key, ...optionProps } = renderProps;
               const parts = option.split(" / ");
               const code = parts[0];
               const desc = parts.slice(1).join(" / ");
@@ -238,7 +223,7 @@ export default function ShipmentPlanningWorkspace() {
             <TableHead>
               <TableRow className={styles.tableHeaderRow}>
                 {HEADERS.map((h, i) => (
-                  <TableCell key={i} className={styles.tableHeaderCell} sx={{ width: Object.values(COL)[i] || undefined }}>{h.label}</TableCell>
+                  <TableCell key={h.label} className={styles.tableHeaderCell} sx={{ width: Object.values(COL)[i] || undefined }}>{h.label}</TableCell>
                 ))}
               </TableRow>
             </TableHead>

@@ -21,6 +21,7 @@ import FileDownloadOutlinedIcon from "@mui/icons-material/FileDownloadOutlined";
 import KeyboardArrowRightIcon from "@mui/icons-material/KeyboardArrowRight";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { exportFactoryInventoryCsv } from "../../utils/constants";
+import PropTypes from "prop-types";
 import styles from "./FactoryInventory.module.css";
 
 const parseNum = (val) => {
@@ -51,11 +52,26 @@ function FactoryRow({ row, expanded, onToggle }) {
         "&:hover": { backgroundColor: "#f4f7ff" },
         borderBottom: "1px solid #d9dce1",
       }}
+      tabIndex={0}
       onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
     >
       <TableCell sx={{ p: "6px 4px 6px 8px", border: "none" }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: "4px" }}>
-          <IconButton size="small" sx={{ p: 0, mt: "1px" }}>
+          <IconButton
+            size="small"
+            sx={{ p: 0, mt: "1px" }}
+            aria-label={expanded ? `Collapse ${row.name}` : `Expand ${row.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle();
+            }}
+          >
             {expanded ? (
               <KeyboardArrowDownIcon sx={{ fontSize: 16, color: "#5a6072" }} />
             ) : (
@@ -83,6 +99,19 @@ function FactoryRow({ row, expanded, onToggle }) {
     </TableRow>
   );
 }
+
+FactoryRow.propTypes = {
+  row: PropTypes.shape({
+    name: PropTypes.string,
+    code: PropTypes.string,
+    stock: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    eligible: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    displayStock: PropTypes.string,
+    displayEligible: PropTypes.string,
+  }).isRequired,
+  expanded: PropTypes.bool.isRequired,
+  onToggle: PropTypes.func.isRequired,
+};
 
 function DetailRow({ detail }) {
   const availNum = parseNum(detail.avail || detail.stock);
@@ -114,6 +143,20 @@ function DetailRow({ detail }) {
   );
 }
 
+DetailRow.propTypes = {
+  detail: PropTypes.shape({
+    avail: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    stock: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    eligible: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    location: PropTypes.string,
+    name: PropTypes.string,
+    material: PropTypes.string,
+    dc: PropTypes.string,
+    code: PropTypes.string,
+    sku: PropTypes.string,
+  }).isRequired,
+};
+
 function resolveCbuBadge(filters) {
   const cbu = filters?.CBU;
   if (Array.isArray(cbu) && cbu.length > 0 && cbu[0] !== "All") {
@@ -144,7 +187,7 @@ export default function FactoryInventory() {
   // Dynamically calculate stock and eligible sums for all materials and plants
   const { factoriesList, displayTotalStock, displayTotalEligible } = useMemo(() => {
     const list = (factories || []).map(row => {
-      const details = row.children || (factoryDetails && factoryDetails[row.name]) || [];
+      const details = row.children || factoryDetails?.[row.name] || [];
       let plantStock = 0;
       let plantEligible = 0;
 

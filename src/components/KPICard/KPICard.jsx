@@ -5,12 +5,13 @@
  */
 
 import { Fragment } from "react";
+import PropTypes from "prop-types";
 import styles from "./KPICard.module.css";
 
 const DEFAULT_GRADIENT = "radial-gradient(ellipse at bottom right, rgba(220, 233, 253, 0.9) 0%, rgba(234, 241, 254, 0.45) 40%, #ffffff 75%)";
 
 export default function KPICard({ title, iconBg, icon, metrics, gradient, centered }) {
-  const isCentered = centered || (metrics && metrics.length === 1);
+  const isCentered = centered || metrics?.length === 1;
 
   return (
     <div
@@ -54,3 +55,18 @@ export default function KPICard({ title, iconBg, icon, metrics, gradient, center
     </div>
   );
 }
+
+KPICard.propTypes = {
+  title: PropTypes.string,
+  iconBg: PropTypes.string,
+  icon: PropTypes.node,
+  metrics: PropTypes.arrayOf(
+    PropTypes.shape({
+      label: PropTypes.string,
+      value: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+      color: PropTypes.string,
+    })
+  ).isRequired,
+  gradient: PropTypes.string,
+  centered: PropTypes.bool,
+};

@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo } from "react";
+import PropTypes from "prop-types";
 import Popover from "@mui/material/Popover";
 import CalendarMonthIcon from "@mui/icons-material/CalendarMonth";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
@@ -98,8 +99,16 @@ function DayGridCell({ item, tempStart, tempEnd, hoverDate, onDateClick, onMouse
 
   return (
     <div
+      role="button"
+      tabIndex={isDisabled ? -1 : 0}
       className={cellStyle}
       onClick={() => !isDisabled && onDateClick(dateStr)}
+      onKeyDown={e => {
+        if (!isDisabled && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          onDateClick(dateStr);
+        }
+      }}
       onMouseEnter={() => !isDisabled && onMouseEnter(dateStr)}
     >
       <div
@@ -112,6 +121,20 @@ function DayGridCell({ item, tempStart, tempEnd, hoverDate, onDateClick, onMouse
     </div>
   );
 }
+
+DayGridCell.propTypes = {
+  item: PropTypes.shape({
+    empty: PropTypes.bool,
+    dateStr: PropTypes.string,
+    dayNumber: PropTypes.number,
+    isDisabled: PropTypes.bool,
+  }).isRequired,
+  tempStart: PropTypes.string,
+  tempEnd: PropTypes.string,
+  hoverDate: PropTypes.string,
+  onDateClick: PropTypes.func,
+  onMouseEnter: PropTypes.func,
+};
 
 export default function DateRangePicker({
   startDate,
@@ -251,7 +274,15 @@ export default function DateRangePicker({
     <>
       <div
         className={`${styles.dateRangeTrigger} ${open ? styles.dateRangeTriggerActive : ""}`}
+        role="button"
+        tabIndex={0}
         onClick={handleClickTrigger}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleClickTrigger(e);
+          }
+        }}
         title="Click to select Date Range"
       >
         <span className={styles.floatingLabel}>Date Range</span>
@@ -355,3 +386,11 @@ export default function DateRangePicker({
     </>
   );
 }
+
+DateRangePicker.propTypes = {
+  startDate: PropTypes.string,
+  endDate: PropTypes.string,
+  minDate: PropTypes.string,
+  maxDate: PropTypes.string,
+  onChange: PropTypes.func,
+};

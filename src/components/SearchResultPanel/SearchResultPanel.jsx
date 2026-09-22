@@ -5,6 +5,7 @@
  */
 
 import CircularProgress from "@mui/material/CircularProgress";
+import PropTypes from "prop-types";
 import { mockShipmentDetailsByDc } from "../../utils/constants";
 import styles from "./SearchResultPanel.module.css";
 
@@ -94,7 +95,7 @@ export default function SearchResultPanel({
 }) {
   const displayTerm = term || inputTerm || "";
 
-  if (isLoading && (!searchResults || !searchResults.results || searchResults.results.length === 0)) {
+  if (isLoading && !searchResults?.results?.length) {
     return (
       <div className={styles.container}>
         <div className={styles.loadingContainer}>
@@ -167,3 +168,16 @@ export default function SearchResultPanel({
     </div>
   );
 }
+
+SearchResultPanel.propTypes = {
+  term: PropTypes.string,
+  inputTerm: PropTypes.string,
+  isLoading: PropTypes.bool,
+  searchResults: PropTypes.shape({
+    results: PropTypes.array,
+    totalShipments: PropTypes.number,
+    totalDcs: PropTypes.number,
+  }),
+  data: PropTypes.array,
+  dcShipmentsCache: PropTypes.object,
+};

@@ -4,6 +4,7 @@
  * FilterLoadingOverlay and FeedbackSnackbar.
  */
 
+import PropTypes from "prop-types";
 import Snackbar from "@mui/material/Snackbar";
 import Alert from "@mui/material/Alert";
 import CircularProgress from "@mui/material/CircularProgress";
@@ -51,6 +52,10 @@ export function FilterLoadingOverlay({ isFilterLoading }) {
   );
 }
 
+FilterLoadingOverlay.propTypes = {
+  isFilterLoading: PropTypes.bool,
+};
+
 export function FeedbackSnackbar({ snackbar, onClose }) {
   return (
     <Snackbar
@@ -65,3 +70,12 @@ export function FeedbackSnackbar({ snackbar, onClose }) {
     </Snackbar>
   );
 }
+
+FeedbackSnackbar.propTypes = {
+  snackbar: PropTypes.shape({
+    open: PropTypes.bool,
+    severity: PropTypes.string,
+    message: PropTypes.string,
+  }).isRequired,
+  onClose: PropTypes.func.isRequired,
+};

@@ -6,6 +6,7 @@
  */
 
 import { useState, useMemo, useEffect } from "react";
+import PropTypes from "prop-types";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import IconButton from "@mui/material/IconButton";
@@ -432,3 +433,19 @@ export default function AddCbuDialog({
     </Dialog>
   );
 }
+
+AddCbuDialog.propTypes = {
+  open: PropTypes.bool.isRequired,
+  onClose: PropTypes.func.isRequired,
+  ind: PropTypes.shape({
+    id: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    shipmentId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    sendingPlantCode: PropTypes.string,
+    sourcePlant: PropTypes.string,
+    receivingPlantCode: PropTypes.string,
+    children: PropTypes.array,
+  }),
+  dcLabel: PropTypes.string,
+  plantId: PropTypes.string,
+  onAddCbuSubmit: PropTypes.func,
+};

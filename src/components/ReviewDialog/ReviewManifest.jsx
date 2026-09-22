@@ -4,6 +4,7 @@
  * Displays all SKUs with original/recommended/final quantities and weights.
  */
 
+import PropTypes from "prop-types";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -129,3 +130,25 @@ export default function ReviewManifest({ manifestData }) {
     </div>
   );
 }
+
+ReviewManifest.propTypes = {
+  manifestData: PropTypes.shape({
+    rows: PropTypes.arrayOf(
+      PropTypes.shape({
+        cbuCode: PropTypes.string,
+        description: PropTypes.string,
+        source: PropTypes.string,
+        origQty: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        recQty: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        final: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+        weight: PropTypes.number,
+        tonnage: PropTypes.number,
+        isAdded: PropTypes.bool,
+        tag: PropTypes.string,
+      })
+    ).isRequired,
+    totalFinal: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    totalWeight: PropTypes.number,
+    totalTonnage: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }).isRequired,
+};

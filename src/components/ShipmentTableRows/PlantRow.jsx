@@ -5,6 +5,7 @@
  */
 
 import { memo } from "react";
+import PropTypes from "prop-types";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -43,9 +44,27 @@ export const PlantRow = memo(function PlantRow({
 
   return (
     <>
-      <TableRow className={styles.plantRow} onClick={onTogglePlant}>
+      <TableRow
+        className={styles.plantRow}
+        tabIndex={0}
+        onClick={onTogglePlant}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onTogglePlant?.();
+          }
+        }}
+      >
         <TableCell className={`${styles.plantCell} ${styles.plantCellExpand}`} sx={{ width: COL.expand }}>
-          <IconButton size="small" sx={{ p: 0 }}>
+          <IconButton
+            size="small"
+            sx={{ p: 0 }}
+            aria-label={openPlant ? `Collapse plant ${plant.name}` : `Expand plant ${plant.name}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onTogglePlant?.();
+            }}
+          >
             {openPlant ? <KeyboardArrowDownIcon className={styles.plantIconExpand} /> : <KeyboardArrowRightIcon className={styles.plantIconExpand} />}
           </IconButton>
         </TableCell>
@@ -84,10 +103,10 @@ export const PlantRow = memo(function PlantRow({
                       plantId={plant.id}
                       dc={dc}
                       openDc={!!openDcs[dc.id]}
-                      onToggleDc={() => onToggleDc(plant.id, dc.id)}
+                      onToggleDc={() => onToggleDc?.(plant.id, dc.id)}
                       openInds={openInds}
                       onToggleInd={onToggleInd}
-                      onRecChange={(dcId, indId, skuIdx, val) => onRecChange && onRecChange(plant.id, dcId, indId, skuIdx, val)}
+                      onRecChange={(dcId, indId, skuIdx, val) => onRecChange?.(plant.id, dcId, indId, skuIdx, val)}
                       searchTerm={searchTerm}
                       onReview={onReview}
                       onAddCbu={onAddCbu}
@@ -106,6 +125,32 @@ export const PlantRow = memo(function PlantRow({
     </>
   );
 });
+
+PlantRow.propTypes = {
+  plant: PropTypes.shape({
+    id: PropTypes.string,
+    name: PropTypes.string,
+    location: PropTypes.string,
+    dcs: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    shipments: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    pending: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    children: PropTypes.array,
+  }).isRequired,
+  openPlant: PropTypes.bool,
+  onTogglePlant: PropTypes.func,
+  openDcs: PropTypes.object,
+  onToggleDc: PropTypes.func,
+  openInds: PropTypes.object,
+  onToggleInd: PropTypes.func,
+  onRecChange: PropTypes.func,
+  searchTerm: PropTypes.string,
+  onReview: PropTypes.func,
+  onAddCbu: PropTypes.func,
+  dcShipmentsCache: PropTypes.object,
+  dcLoadingState: PropTypes.object,
+  dcErrorState: PropTypes.object,
+  onRetry: PropTypes.func,
+};
 
 export default PlantRow;
 

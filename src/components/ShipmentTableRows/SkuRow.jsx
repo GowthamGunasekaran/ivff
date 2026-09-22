@@ -5,6 +5,7 @@
  */
 
 import { memo, useState, useEffect } from "react";
+import PropTypes from "prop-types";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
 import { PBadge, FillBadge, NewBadge } from "./TableBadges";
@@ -196,5 +197,26 @@ export const SkuRow = memo(function SkuRow({ sku, highlight, onRecChange }) {
     </TableRow>
   );
 });
+
+SkuRow.propTypes = {
+  sku: PropTypes.shape({
+    Material: PropTypes.string,
+    MaterialDescription: PropTypes.string,
+    recQty: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    eligible: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    cs: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    netweight: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+    actual_source_plant_code: PropTypes.string,
+    sourcePlant: PropTypes.string,
+    plantCode: PropTypes.string,
+    plant: PropTypes.string,
+    fill: PropTypes.oneOfType([PropTypes.bool, PropTypes.string]),
+    isAdded: PropTypes.bool,
+    tag: PropTypes.string,
+    source_bucket: PropTypes.string,
+  }).isRequired,
+  highlight: PropTypes.bool,
+  onRecChange: PropTypes.func,
+};
 
 export default SkuRow;

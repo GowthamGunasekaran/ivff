@@ -7,6 +7,7 @@
  */
 
 import { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from "react";
+import PropTypes from "prop-types";
 import { fetchFilters, fetchMinDate } from "./api/filterApi";
 import { fetchKPIs } from "./api/kpiApi";
 import { fetchChartTrends } from "./api/chartApi";
@@ -539,6 +540,10 @@ export const AppProvider = ({ children }) => {
       <FeedbackSnackbar snackbar={snackbar} onClose={closeSnackbar} />
     </AppContext.Provider>
   );
+};
+
+AppProvider.propTypes = {
+  children: PropTypes.node,
 };
 
 export default AppContext;

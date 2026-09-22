@@ -5,6 +5,7 @@
  */
 
 import { memo, useMemo } from "react";
+import PropTypes from "prop-types";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell from "@mui/material/TableCell";
@@ -31,6 +32,10 @@ function DcLoadingState({ dcName }) {
   );
 }
 
+DcLoadingState.propTypes = {
+  dcName: PropTypes.string,
+};
+
 function DcErrorState({ error, onRetry }) {
   return (
     <TableRow sx={{ backgroundColor: "#fff5f5", borderBottom: "1px solid #fed7d7" }}>
@@ -40,7 +45,7 @@ function DcErrorState({ error, onRetry }) {
           <button
             onClick={(e) => {
               e.stopPropagation();
-              onRetry && onRetry();
+              onRetry?.();
             }}
             style={{
               padding: "3px 10px",
@@ -60,6 +65,11 @@ function DcErrorState({ error, onRetry }) {
   );
 }
 
+DcErrorState.propTypes = {
+  error: PropTypes.string,
+  onRetry: PropTypes.func,
+};
+
 export const DcRow = memo(function DcRow({
   plantId,
   dc,
@@ -77,7 +87,7 @@ export const DcRow = memo(function DcRow({
   onRetry,
 }) {
   const displayedShipments = useMemo(() => {
-    if (!searchTerm || !searchTerm.trim()) return shipments;
+    if (!searchTerm?.trim()) return shipments;
     return shipments.filter(ind => shipmentMatchesTerm(ind, searchTerm));
   }, [shipments, searchTerm]);
 
@@ -85,11 +95,26 @@ export const DcRow = memo(function DcRow({
     <>
       <TableRow
         className={styles.dcRow}
+        tabIndex={0}
         onClick={onToggleDc}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggleDc?.();
+          }
+        }}
         data-testid={`dc-row-${dc.id}`}
       >
         <TableCell className={`${styles.dcCell} ${styles.dcCellExpand}`} sx={{ width: COL.expand }}>
-          <IconButton size="small" sx={{ p: 0 }}>
+          <IconButton
+            size="small"
+            sx={{ p: 0 }}
+            aria-label={openDc ? `Collapse DC ${dc.dc}` : `Expand DC ${dc.dc}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleDc?.();
+            }}
+          >
             {openDc ? <KeyboardArrowDownIcon className={styles.dcIconExpand} /> : <KeyboardArrowRightIcon className={styles.dcIconExpand} />}
           </IconButton>
         </TableCell>
@@ -110,7 +135,7 @@ export const DcRow = memo(function DcRow({
             <Table size="small" sx={{ tableLayout: "fixed", minWidth: 1150 }}>
               <TableBody>
                 {isLoading && <DcLoadingState dcName={dc.dc} />}
-                {!isLoading && error && <DcErrorState error={error} onRetry={() => onRetry && onRetry(plantId, dc.id)} />}
+                {!isLoading && error && <DcErrorState error={error} onRetry={() => onRetry?.(plantId, dc.id)} />}
                 {!isLoading && !error && displayedShipments.length === 0 && (
                   <TableRow sx={{ backgroundColor: "#fafbff", borderBottom: "1px solid #eceef3" }}>
                     <TableCell colSpan={12} sx={{ p: 2, textAlign: "center", color: "#8a90a0", fontSize: 11 }}>
@@ -125,10 +150,10 @@ export const DcRow = memo(function DcRow({
                       ind={ind}
                       open={!!openInds[ind.id]}
                       onToggle={() => onToggleInd(ind.id)}
-                      onRecChange={(indId, skuIdx, val) => onRecChange && onRecChange(dc.id, indId, skuIdx, val)}
+                      onRecChange={(indId, skuIdx, val) => onRecChange?.(dc.id, indId, skuIdx, val)}
                       searchTerm={searchTerm}
                       onReview={onReview}
-                      onAddCbu={(targetInd) => onAddCbu && onAddCbu(targetInd, dc.id, plantId, dc.dc)}
+                      onAddCbu={(targetInd) => onAddCbu?.(targetInd, dc.id, plantId, dc.dc)}
                       dcLabel={dc.dc}
                     />
                   ))
@@ -141,6 +166,28 @@ export const DcRow = memo(function DcRow({
     </>
   );
 });
+
+DcRow.propTypes = {
+  plantId: PropTypes.string,
+  dc: PropTypes.shape({
+    id: PropTypes.string,
+    dc: PropTypes.string,
+    location: PropTypes.string,
+    shipments: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
+  }).isRequired,
+  openDc: PropTypes.bool,
+  onToggleDc: PropTypes.func,
+  openInds: PropTypes.object,
+  onToggleInd: PropTypes.func,
+  onRecChange: PropTypes.func,
+  searchTerm: PropTypes.string,
+  onReview: PropTypes.func,
+  onAddCbu: PropTypes.func,
+  shipments: PropTypes.array,
+  isLoading: PropTypes.bool,
+  error: PropTypes.string,
+  onRetry: PropTypes.func,
+};
 
 export default DcRow;
 

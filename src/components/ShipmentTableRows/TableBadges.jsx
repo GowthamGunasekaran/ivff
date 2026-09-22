@@ -6,6 +6,7 @@
 
 import Tooltip from "@mui/material/Tooltip";
 import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
+import PropTypes from "prop-types";
 import { pColors } from "../../utils/constants";
 import styles from "./ShipmentTableRows.module.css";
 
@@ -56,6 +57,10 @@ export function PBadge({ p }) {
   );
 }
 
+PBadge.propTypes = {
+  p: PropTypes.string,
+};
+
 export function FillBadge() {
   return <span className={styles.badgeFill}>FILL</span>;
 }
@@ -73,3 +78,7 @@ export function StatusBadge({ status }) {
   const c = map[status] || map.PENDING;
   return <span className={styles.badgeStatus} style={{ background: c.bg, color: c.color }}>{status}</span>;
 }
+
+StatusBadge.propTypes = {
+  status: PropTypes.string,
+};
