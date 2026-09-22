@@ -92,7 +92,7 @@ describe('AddCbuDialog Component', () => {
     expect(screen.queryByText('Validation Checks')).not.toBeInTheDocument();
   });
 
-  it('displays candidate CBUs with checkbox, CBU ID, description, MSDN loss, and eligible qty', () => {
+  it('displays candidate CBUs with CBU ID, description, MSDN loss, eligible qty, and enabled recommended qty input', () => {
     render(
       <AddCbuDialog
         open={true}
@@ -112,9 +112,12 @@ describe('AddCbuDialog Component', () => {
     expect(screen.getByText('DOMEX OXY PWR BLEACH 750ML')).toBeInTheDocument();
     expect(screen.getByText('40 cs')).toBeInTheDocument();
     expect(screen.getByText('800 cs')).toBeInTheDocument();
+
+    // Does NOT render select checkboxes
+    expect(screen.queryByLabelText(/Select /)).not.toBeInTheDocument();
   });
 
-  it('disables recommended quantity input when unchecked, and enables with default 0 when checked', () => {
+  it('enables recommended quantity input directly with default 0 without requiring checkbox selection', () => {
     render(
       <AddCbuDialog
         open={true}
@@ -125,17 +128,10 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
     const inputs = screen.getAllByPlaceholderText('0');
     const dtbdInput = inputs[0];
 
-    // Initially unchecked and disabled
-    expect(checkbox).not.toBeChecked();
-    expect(dtbdInput).toBeDisabled();
-
-    // Check the box
-    fireEvent.click(checkbox);
-    expect(checkbox).toBeChecked();
+    // All inputs are directly enabled and default to 0
     expect(dtbdInput).toBeEnabled();
     expect(dtbdInput.value).toBe('0');
   });
@@ -151,10 +147,7 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
-    fireEvent.click(checkbox);
-
-    const dtbdInput = screen.getAllByPlaceholderText('0')[0];
+    const dtbdInput = screen.getByLabelText('Recommended quantity for DTBD1R1');
 
     // Change recommended qty from 0 to 50
     fireEvent.change(dtbdInput, { target: { value: '50' } });
@@ -167,7 +160,7 @@ describe('AddCbuDialog Component', () => {
     expect(screen.getByText('0 cs')).toBeInTheDocument();
   });
 
-  it('submits selected CBUs and closes dialog', () => {
+  it('submits non-zero CBUs and closes dialog', () => {
     render(
       <AddCbuDialog
         open={true}
@@ -178,10 +171,7 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
-    fireEvent.click(checkbox);
-
-    const dtbdInput = screen.getAllByPlaceholderText('0')[0];
+    const dtbdInput = screen.getByLabelText('Recommended quantity for DTBD1R1');
     fireEvent.change(dtbdInput, { target: { value: '25' } });
 
     const submitBtn = screen.getByRole('button', { name: /submit/i });
@@ -203,7 +193,7 @@ describe('AddCbuDialog Component', () => {
     expect(mockOnClose).toHaveBeenCalled();
   });
 
-  it('pre-populates previously added CBUs as checked', () => {
+  it('pre-populates previously added CBUs with their current recommended quantity', () => {
     const shipmentWithAddedCbu = {
       ...mockShipment,
       children: [
@@ -229,10 +219,7 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
-    expect(checkbox).toBeChecked();
-
-    const dtbdInput = screen.getAllByPlaceholderText('0')[0];
+    const dtbdInput = screen.getByLabelText('Recommended quantity for DTBD1R1');
     expect(dtbdInput).toBeEnabled();
     expect(dtbdInput.value).toBe('30');
   });
@@ -248,14 +235,11 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
-    fireEvent.click(checkbox);
-
     // Inside the dialog table, the NEW tag should NOT be displayed
     expect(screen.queryByText('NEW')).not.toBeInTheDocument();
   });
 
-  it('allows unchecking previously added CBU and submitting removal', () => {
+  it('allows setting previously added CBU quantity to zero to submit removal from shipment', () => {
     const shipmentWithAddedCbu = {
       ...mockShipment,
       children: [
@@ -281,17 +265,17 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
-    expect(checkbox).toBeChecked();
+    const dtbdInput = screen.getByLabelText('Recommended quantity for DTBD1R1');
+    expect(dtbdInput.value).toBe('30');
 
-    // Uncheck it
-    fireEvent.click(checkbox);
-    expect(checkbox).not.toBeChecked();
+    // Set to 0 to remove
+    fireEvent.change(dtbdInput, { target: { value: '0' } });
+    expect(dtbdInput.value).toBe('0');
 
     const submitBtn = screen.getByRole('button', { name: /submit/i });
     fireEvent.click(submitBtn);
 
-    // DTBD1R1 should not be in the submitted list
+    // DTBD1R1 should not be in the submitted list (empty list submitted)
     expect(mockHandleAddCbuSubmit).toHaveBeenCalledWith(
       'delhi',
       'Delhi DC',
@@ -300,7 +284,7 @@ describe('AddCbuDialog Component', () => {
     );
   });
 
-  it('renders all fetched factory materials with previously added CBUs pre-selected when reopened', () => {
+  it('renders all fetched factory materials with previously added CBUs pre-populated when reopened', () => {
     useAppContext.mockReturnValue({
       globalEligibleState: {
         'Delhi Plant': {
@@ -360,34 +344,22 @@ describe('AddCbuDialog Component', () => {
     expect(screen.getByText('F0583R2')).toBeInTheDocument();
     expect(screen.getByText('I2040R8')).toBeInTheDocument();
 
-    // DTBD1R1 should be pre-selected (checked) with 30 cases
-    const dtbdCheckbox = screen.getByLabelText('Select DTBD1R1');
-    expect(dtbdCheckbox).toBeChecked();
-    const dtbdInput = screen.getByDisplayValue('30');
-    expect(dtbdInput).toBeInTheDocument();
+    // DTBD1R1 should be pre-populated with 30 cases
+    const dtbdInput = screen.getByLabelText('Recommended quantity for DTBD1R1');
+    expect(dtbdInput.value).toBe('30');
 
-    // Other factory materials should be unchecked
-    const f0583Checkbox = screen.getByLabelText('Select F0583R2');
-    expect(f0583Checkbox).not.toBeChecked();
+    // Other factory materials should be default 0
+    const f0583Input = screen.getByLabelText('Recommended quantity for F0583R2');
+    expect(f0583Input.value).toBe('0');
 
-    const i2040Checkbox = screen.getByLabelText('Select I2040R8');
-    expect(i2040Checkbox).not.toBeChecked();
-
-    // User can check F0583R2 and enter recommended qty
-    fireEvent.click(f0583Checkbox);
-    expect(f0583Checkbox).toBeChecked();
-
-    const inputs = screen.getAllByRole('spinbutton');
-    // Find the input corresponding to F0583R2 (the one that now has value 0 and is enabled)
-    const f0583Input = inputs.find(input => input !== dtbdInput && !input.disabled);
-    expect(f0583Input).toBeDefined();
+    // User directly enters recommended qty for F0583R2
     fireEvent.change(f0583Input, { target: { value: '100' } });
 
     // Submit dialog
     const submitBtn = screen.getByRole('button', { name: /submit/i });
     fireEvent.click(submitBtn);
 
-    // Both DTBD1R1 and F0583R2 should be in submitted list
+    // Both DTBD1R1 (30) and F0583R2 (100) should be in submitted list
     expect(mockHandleAddCbuSubmit).toHaveBeenCalledWith(
       'delhi',
       'Delhi DC',
@@ -412,10 +384,7 @@ describe('AddCbuDialog Component', () => {
       />
     );
 
-    const checkbox = screen.getByLabelText('Select DTBD1R1');
-    fireEvent.click(checkbox);
-
-    const input = screen.getAllByPlaceholderText('0')[0];
+    const input = screen.getByLabelText('Recommended quantity for DTBD1R1');
     // Test clearing input to empty string
     fireEvent.change(input, { target: { value: '' } });
     expect(input.value).toBe('');
@@ -501,9 +470,8 @@ describe('AddCbuDialog Component', () => {
       expect(buildShipmentCandidateCbus({ ind: null })).toEqual([]);
     });
 
-    it('TABLE_COLUMNS configuration has all 6 expected column keys', () => {
+    it('TABLE_COLUMNS configuration has all 5 expected column keys', () => {
       expect(TABLE_COLUMNS.map(c => c.id)).toEqual([
-        'select',
         'cbu',
         'description',
         'msdnLoss',

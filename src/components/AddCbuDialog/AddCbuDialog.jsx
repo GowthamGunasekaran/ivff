@@ -10,7 +10,6 @@ import PropTypes from "prop-types";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import IconButton from "@mui/material/IconButton";
-import Checkbox from "@mui/material/Checkbox";
 import Table from "@mui/material/Table";
 import TableContainer from "@mui/material/TableContainer";
 import TableHead from "@mui/material/TableHead";
@@ -31,7 +30,6 @@ import styles from "./AddCbuDialog.module.css";
  * Table column schema configuration for Add CBU dialog
  */
 export const TABLE_COLUMNS = [
-  { id: "select", label: "Select", width: 48, align: "center" },
   { id: "cbu", label: "CBU", width: 140, align: "left" },
   { id: "description", label: "Material Description", align: "left" },
   { id: "msdnLoss", label: "MSDN Loss", width: 110, align: "center" },
@@ -169,7 +167,7 @@ export default function AddCbuDialog({
     return buildShipmentCandidateCbus({ ind, factoryDetails, resolvedFactory });
   }, [ind, factoryDetails, resolvedFactory]);
 
-  // Local table state keyed by material code: { [code]: { checked, recQty, maxPool } }
+  // Local table state keyed by material code: { [code]: { recQty, maxPool } }
   const [rowsState, setRowsState] = useState({});
 
   useEffect(() => {
@@ -196,7 +194,6 @@ export default function AddCbuDialog({
       const maxPool = curGlobalElig + existingRec;
 
       initialRows[codeKey] = {
-        checked: isPreSelected,
         recQty: existingRec,
         maxPool,
       };
@@ -207,24 +204,9 @@ export default function AddCbuDialog({
 
   if (!ind) return null;
 
-  const handleToggleCheck = (codeKey) => {
-    setRowsState(prev => {
-      const cur = prev[codeKey] || { checked: false, recQty: 0, maxPool: 1000 };
-      const nextChecked = !cur.checked;
-      return {
-        ...prev,
-        [codeKey]: {
-          ...cur,
-          checked: nextChecked,
-          recQty: nextChecked ? (cur.recQty > 0 ? cur.recQty : 0) : 0,
-        },
-      };
-    });
-  };
-
   const handleRecQtyChange = (codeKey, rawVal) => {
     setRowsState(prev => {
-      const cur = prev[codeKey] || { checked: false, recQty: 0, maxPool: 1000 };
+      const cur = prev[codeKey] || { recQty: 0, maxPool: 1000 };
       if (rawVal === "") {
         return {
           ...prev,
@@ -246,7 +228,8 @@ export default function AddCbuDialog({
     const selectedCbus = candidateItems
       .filter(item => {
         const codeKey = extractCbuCode(item);
-        return Boolean(rowsState[codeKey]?.checked);
+        const numRec = Number(rowsState[codeKey]?.recQty) || 0;
+        return numRec > 0;
       })
       .map(item => {
         const codeKey = extractCbuCode(item);
@@ -343,25 +326,13 @@ export default function AddCbuDialog({
                     candidateItems.map((item, idx) => {
                       const codeKey = extractCbuCode(item);
                       const desc = extractCbuDesc(item, codeKey);
-                      const rState = rowsState[codeKey] || { checked: false, recQty: 0, maxPool: item.eligible || 0 };
-                      const isChecked = Boolean(rState.checked);
+                      const rState = rowsState[codeKey] || { recQty: 0, maxPool: item.eligible || 0 };
                       const msdnLoss = item.msdnLossCases ?? item.mstn_loss_mitigation_cases ?? 85;
                       const numRec = Number(rState.recQty) || 0;
                       const dynamicEligible = Math.max(0, rState.maxPool - numRec);
+                      const isNonZero = numRec > 0;
 
                       const cellMap = {
-                        select: (
-                          <Checkbox
-                            checked={isChecked}
-                            onChange={() => handleToggleCheck(codeKey)}
-                            size="small"
-                            sx={{
-                              color: "#94a3b8",
-                              "&.Mui-checked": { color: "#2563eb" },
-                            }}
-                            inputProps={{ "aria-label": `Select ${codeKey}` }}
-                          />
-                        ),
                         cbu: (
                           <div className={styles.cbuId}>
                             <span>{codeKey}</span>
@@ -385,12 +356,12 @@ export default function AddCbuDialog({
                             type="number"
                             min={0}
                             max={rState.maxPool}
-                            disabled={!isChecked}
                             value={rState.recQty}
                             onChange={e => handleRecQtyChange(codeKey, e.target.value)}
-                            className={`${styles.recInput} ${!isChecked ? styles.recInputDisabled : ""}`}
-                            title={isChecked ? `Max eligible: ${rState.maxPool.toLocaleString()}` : "Select CBU to edit"}
+                            className={styles.recInput}
+                            title={`Max eligible: ${rState.maxPool.toLocaleString()} cs`}
                             placeholder="0"
+                            aria-label={`Recommended quantity for ${codeKey}`}
                           />
                         ),
                       };
@@ -398,14 +369,13 @@ export default function AddCbuDialog({
                       return (
                         <TableRow
                           key={`${codeKey}_${idx}`}
-                          className={`${styles.tableBodyRow} ${isChecked ? styles.tableBodyRowSelected : ""}`}
+                          className={`${styles.tableBodyRow} ${isNonZero ? styles.tableBodyRowSelected : ""}`}
                         >
                           {TABLE_COLUMNS.map((col) => (
                             <TableCell
                               key={col.id}
                               align={col.align}
                               className={styles.tableCell}
-                              sx={col.id === "select" ? { textAlign: "center", p: 0 } : undefined}
                             >
                               {cellMap[col.id]}
                             </TableCell>
